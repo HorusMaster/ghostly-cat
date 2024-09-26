@@ -1,0 +1,15 @@
+[MASTER]
+
+load-plugins=pylint_pydantic
+max-line-length=100
+extension-pkg-whitelist=pydantic
+good-names=s3,df
+disable=
+  too-many-locals,
+  missing-module-docstring,
+  missing-class-docstring,
+  missing-function-docstring,
+  too-many-ancestors,
+  duplicate-code,
+  too-few-public-methods,
+  fixme

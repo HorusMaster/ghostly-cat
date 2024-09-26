@@ -11,7 +11,10 @@
 			"extensions": [
 				"ms-python.python",
 				"ms-python.vscode-pylance"
-			]
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/code/cat_control/.venv/bin/python"
+			}
 		}
 	},
 	"workspaceFolder": "/workspaces/ghostly-cat",

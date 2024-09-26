@@ -22,6 +22,7 @@ RUN apt-get install -y --no-install-recommends \
     python3.10-venv \
     build-essential python3-dev gcc \
     git  `# For developer container` \
+    make `# For Makefile usage` \
     && apt-get clean
 
 ENV VIRTUAL_ENV=/code/cat_control/.venv
@@ -31,6 +32,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY requirements.txt /code/cat_control/requirements.txt
 RUN pip3 install -r /code/cat_control/requirements.txt
 
+#COPY ./.flake8 ./pyproject.toml /code/
 
 COPY . /code/cat_control/
 WORKDIR /code/cat_control

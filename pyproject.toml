@@ -1,0 +1,46 @@
+[tool.black]
+line-length = 100
+exclude = '''
+/(
+  | migrations
+  | \.git
+  | \.github
+  | node_modules
+  | mypy_cache
+  | .venv
+)/
+
+'''
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+skip = [".gitignore", ".dockerignore", "lambda_handler.py"]
+extend_skip = ["migrations"]
+known_third_party = ["redis"]
+
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+extend-ignore = ["UP031", "F405"]
+
+
+[tool.ruff]
+extend-exclude = [
+    "migrations",
+]
+line-length = 100

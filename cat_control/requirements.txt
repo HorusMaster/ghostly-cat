@@ -1,1 +1,5 @@
 adafruit-circuitpython-servokit
+pylint==2.17.7
+isort
+black==24.1.0
+flake8
