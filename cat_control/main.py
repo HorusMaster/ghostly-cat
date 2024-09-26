@@ -24,12 +24,22 @@ def move_servo_with_delay(servo_channel, target_angle, current_angle):
     
     print(f"Servo {servo_channel} movido de {current_angle}° a {target_angle}° en {time_to_wait:.2f} segundos")
 
-# Ejemplo: Mover el servo en el canal 0 de 0° a 90°
-current_angle = 0
-target_angle = 180
-kit.servo[8].angle = 0
-time.sleep(1)
-move_servo_with_delay(8, target_angle, current_angle)
+# Rutina para hacer girar el servo de 0° a 180° 5 veces
+def routine_servo_5_cycles(servo_channel):
+    current_angle = 0
+    kit.servo[servo_channel].angle = 0
+    time.sleep(1)
+    for _ in range(5):
+        # Mover de 0° a 180°
+        target_angle = 180
+        move_servo_with_delay(servo_channel, target_angle, current_angle)
+        current_angle = target_angle
+        
+        # Mover de 180° a 0°
+        target_angle = 0
+        move_servo_with_delay(servo_channel, target_angle, current_angle)
+        current_angle = target_angle
 
-# Luego puedes actualizar la posición actual después del movimiento
-current_angle = target_angle
+# Ejecuta la rutina para el canal 8
+routine_servo_5_cycles(0)
+
