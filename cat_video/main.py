@@ -11,6 +11,7 @@ def load_model(weights, device):
 
 def capture_video():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = load_model("models/yolov5n-face.pt", device)
     print("Device is using: ", device)
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
@@ -21,7 +22,7 @@ def capture_video():
     )
 
     # Abrir la cámara con el pipeline GStreamer
-    cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
+    cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)    
 
     # Comprobar si la cámara se abrió correctamente
     if not cap.isOpened():
@@ -40,7 +41,28 @@ def capture_video():
             print("Error: No se pudo recibir el frame.")
             break
 
-        orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)      
+        orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)    
+        # img0 = copy.deepcopy(orgimg)
+        # h0, w0 = orgimg.shape[:2]  # orig hw
+        # r = img_size / max(h0, w0)  # resize image to img_size
+        # if r != 1:  # always resize down, only resize up if training with augmentation
+        #     interp = cv2.INTER_AREA if r < 1  else cv2.INTER_LINEAR
+        #     img0 = cv2.resize(img0, (int(w0 * r), int(h0 * r)), interpolation=interp)
+
+        # imgsz = check_img_size(img_size, s=model.stride.max())  # check img_size
+
+        # img = letterbox(img0, new_shape=imgsz)[0]
+        # # Convert from w,h,c to c,w,h
+        # img = img.transpose(2, 0, 1).copy()
+
+        # img = torch.from_numpy(img).to(device)
+        # img = img.float()  # uint8 to fp16/32
+        # img /= 255.0  # 0 - 255 to 0.0 - 1.0
+        # if img.ndimension() == 3:
+        #     img = img.unsqueeze(0)
+
+        # # Inference
+        # pred = model(img)[0]  
         cv2.imshow("Video de la cámara", orgimg)
 
         # Salir del bucle si se presiona la tecla 'q'
