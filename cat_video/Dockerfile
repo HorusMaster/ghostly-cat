@@ -22,7 +22,7 @@ RUN pip3 install --upgrade pip
 COPY requirements.txt /code/requirements.txt
 RUN pip3 install --no-deps -r /code/requirements.txt
 
-RUN git clone --branch v6.1 https://github.com/ultralytics/yolov5.git /code/yolov5
+RUN git clone https://github.com/deepcam-cn/yolov5-face.git /code/yolov5
 ENV PYTHONPATH="${PYTHONPATH}:/code/yolov5"
 
 COPY . /code/cat_video/
