@@ -1,0 +1,30 @@
+{
+	"name": "Existing Dockerfile",
+	"build": {
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		"context": "..",
+		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+		"dockerfile": "../Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance"
+			]
+			// "settings": {
+			// 	"python.defaultInterpreterPath": "/code/cat_video/.venv/bin/python"
+			// }
+		}
+	},
+	"workspaceFolder": "/workspaces/ghostly-cat/cat_video",
+	"containerEnv": {		
+		"ENV": "dev"
+	},
+	"runArgs": [
+		"--privileged",
+		"--runtime", "nvidia",
+		"--device", "/dev/video0",
+		"-v", "/tmp/argus_socket:/tmp/argus_socket"
+	]
+}
