@@ -5,7 +5,7 @@ import torch
 from models.experimental import attempt_load
 import copy
 from utils.datasets import letterbox
-from utils.general import check_img_size
+from utils.general import check_img_size, non_max_suppression_face
 
 
 def load_model(weights, device):
@@ -17,6 +17,8 @@ def capture_video():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model("models/yolov5n-face.pt", device)
     img_size = 640
+    conf_thres = 0.6
+    iou_thres = 0.5
     print("Device is using: ", device)
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
@@ -44,7 +46,7 @@ def capture_video():
         # Si no se pudo capturar un frame, salir del bucle
         if not ret:
             print("Error: No se pudo recibir el frame.")
-            break 
+            break
 
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img0 = copy.deepcopy(orgimg)
@@ -68,6 +70,8 @@ def capture_video():
 
         # Inference
         pred = model(img)[0]
+        pred = non_max_suppression_face(pred, conf_thres, iou_thres)
+        print(len(pred[0]), "face" if len(pred[0]) == 1 else "faces")
         cv2.imshow("Video de la cámara", orgimg)
 
         # Salir del bucle si se presiona la tecla 'q'
