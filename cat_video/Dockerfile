@@ -15,13 +15,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-tk \
     && apt-get clean
 
+RUN apt-get remove -y python3-yaml
+
 RUN pip3 install --upgrade pip
 
 COPY requirements.txt /code/requirements.txt
 RUN pip3 install --no-deps -r /code/requirements.txt
 
+RUN git clone --branch v6.1 https://github.com/ultralytics/yolov5.git /code/yolov5
+ENV PYTHONPATH="${PYTHONPATH}:/code/yolov5"
+
 COPY . /code/cat_video/
 WORKDIR /code/cat_video
 
-# RUN git clone --branch v5.0 https://github.com/ultralytics/yolov5.git /code/yolov5
-# ENV PYTHONPATH="${PYTHONPATH}:/code/yolov5"
+

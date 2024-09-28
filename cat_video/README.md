@@ -13,6 +13,7 @@ docker run -it  --rm \
                 --privileged \
                 --runtime nvidia \
                 --network host \
+                --ipc host \
                 --device /dev/video0 \
                 --volume /tmp/argus_socket:/tmp/argus_socket \
                 cat_video

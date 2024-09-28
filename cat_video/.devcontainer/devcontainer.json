@@ -24,6 +24,7 @@
 	"runArgs": [
 		"--privileged",
 		"--runtime", "nvidia",
+		"--ipc", "host",
 		"--device", "/dev/video0",
 		"-v", "/tmp/argus_socket:/tmp/argus_socket"
 	]
