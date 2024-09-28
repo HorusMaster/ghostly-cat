@@ -1,11 +1,38 @@
-import torch
+import cv2
 
-model = torch.hub.load("/code/yolov5", "custom", "models/yolov5n-face.pt", source='local', force_reload=True)
+# Definir el pipeline GStreamer para utilizar nvarguscamerasrc
+gst_pipeline = (
+    "nvarguscamerasrc ! "
+    "video/x-raw(memory:NVMM), width=1280, height=720, framerate=30/1, format=NV12 ! "
+    "nvvidconv ! video/x-raw, format=BGRx ! "
+    "videoconvert ! video/x-raw, format=BGR ! appsink"
+)
 
-img = "https://ultralytics.com/images/zidane.jpg"  # or file, Path, PIL, OpenCV, numpy, list
 
-# Inference
-results = model(img)
+# Abrir la cámara con el pipeline GStreamer
+cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
 
-# Results
-results.print()  # or .show(), .save(), .crop(), .pandas(), etc.
+# Comprobar si la cámara se abrió correctamente
+if not cap.isOpened():
+    print("Error: No se pudo abrir la cámara.")
+    exit()
+
+while True:
+    # Capturar frame por frame
+    ret, frame = cap.read()
+
+    # Si no se pudo capturar un frame, salir del bucle
+    if not ret:
+        print("Error: No se pudo recibir el frame.")
+        break
+
+    # Mostrar el frame
+    cv2.imshow("Video de la cámara", frame)
+
+    # Salir del bucle si se presiona la tecla 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Liberar la cámara y cerrar las ventanas
+cap.release()
+cv2.destroyAllWindows()
