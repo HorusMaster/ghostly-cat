@@ -21,3 +21,8 @@ docker run -it  --rm \
 
 # Detect devices
 sudo i2cdetect -y -r 1
+
+
+# Dev container
+python3 detect_face.py --weights "models/yolov5n-face.pt"
+python3 detect_face.py --weights "models/yolov5n-face.pt" --source "images/zidane.jpg"
