@@ -25,4 +25,14 @@ sudo i2cdetect -y -r 1
 
 # Dev container
 python3 detect_face.py --weights "models/yolov5n-face.pt"
-python3 detect_face.py --weights "models/yolov5n-face.pt" --source "images/zidane.jpg"
+python3 detect_face.py --weights "models/yolov5n-face.pt" --source "images/zidane.jpg" --view-img
+
+
+gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! 'video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1' ! nvoverlaysink
+
+
+Failed to add /run/systemd/ask-password to directory watch: No space left on device
+
+sudo -i
+echo 1048576 > /proc/sys/fs/inotify/max_user_watches
+exit
