@@ -1,9 +1,7 @@
 import torch
-from pathlib import Path
 
-# Model
-model = torch.hub.load("ultralytics/yolov5", "custom", path="models/best.pt", force_reload=True)
-# Images
+model = torch.hub.load(".", "custom","models/yolov5n-face.pt", source='local', force_reload=True)
+
 img = "https://ultralytics.com/images/zidane.jpg"  # or file, Path, PIL, OpenCV, numpy, list
 
 # Inference

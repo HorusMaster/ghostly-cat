@@ -25,6 +25,7 @@ RUN apt-get install -y --no-install-recommends \
     make `# For Makefile usage` \
     && apt-get clean
 
+
 ENV VIRTUAL_ENV=/code/cat_control/.venv
 RUN python3.10 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
