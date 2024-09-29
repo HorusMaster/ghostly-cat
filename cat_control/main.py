@@ -13,8 +13,8 @@ SERVO_X_MIN = 0
 SERVO_X_MAX = 100
 SERVO_Y_MIN = 0
 SERVO_Y_MAX = 30
-IMAGE_WIDTH = 1920
-IMAGE_HEIGHT = 1080
+IMAGE_WIDTH = 1280
+IMAGE_HEIGHT = 720
 
 
 def move_servo_x(angle):
@@ -33,8 +33,8 @@ def map_value(value, input_min, input_max, output_min, output_max):
 
 def control_servos(centroid_x, centroid_y):
     """ Mapea las coordenadas del centroide a los ángulos de los servos y los mueve. """
-    servo_x_angle = map_value(centroid_x, 0, IMAGE_WIDTH, SERVO_X_MIN, SERVO_X_MAX)
-    servo_y_angle = map_value(centroid_y, 0, IMAGE_HEIGHT, SERVO_Y_MIN, SERVO_Y_MAX)
+    servo_x_angle = map_value(centroid_x, 0, IMAGE_WIDTH, SERVO_X_MAX, SERVO_X_MIN)
+    servo_y_angle = map_value(centroid_y, 0, IMAGE_HEIGHT, SERVO_Y_MAX, SERVO_Y_MIN)
 
     # Mover los servos a los ángulos calculados
     move_servo_x(servo_x_angle)

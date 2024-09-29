@@ -99,13 +99,15 @@ def capture_video(centroid_queue):
     img_size = 640
     conf_thres = 0.6
     iou_thres = 0.5
+    #skip_frames=3
     print("Device is using: ", device)
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
-        "nvarguscamerasrc ! "
-        "video/x-raw(memory:NVMM), width=1920, height=1080, framerate=30/1, format=NV12 ! "
+    "nvarguscamerasrc ! "
+        "video/x-raw(memory:NVMM), width=1280, height=720, framerate=30/1, format=NV12 ! "
         "nvvidconv ! video/x-raw, format=BGRx ! "
-        "videoconvert ! video/x-raw, format=BGR ! appsink"
+        "videoconvert ! video/x-raw, format=BGR ! "
+        "appsink max-buffers=1 drop=true"
     )
 
     # Abrir la cámara con el pipeline GStreamer
@@ -117,8 +119,10 @@ def capture_video(centroid_queue):
         return
     
     print("OPENCV and camera LOADED")
-    model = load_model("models/yolov5n-face.pt", device)
+    model = load_model("models/yolov5n-0.5.pt", device)
+    print("ModelLOADED")
 
+    #frame_count = 0
     while True:
         # Capturar frame por frame
         try:
@@ -133,6 +137,12 @@ def capture_video(centroid_queue):
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
+
+        # if frame_count % skip_frames != 0:
+        #     frame_count += 1
+        #     continue
+
+        # frame_count += 1
 
     
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
