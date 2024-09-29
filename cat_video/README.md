@@ -36,3 +36,7 @@ Failed to add /run/systemd/ask-password to directory watch: No space left on dev
 sudo -i
 echo 1048576 > /proc/sys/fs/inotify/max_user_watches
 exit
+
+# notes
+
+Check /code/yolov5/detect_face.py for more details

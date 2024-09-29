@@ -52,21 +52,33 @@ def show_results(img, xyxy, conf, landmarks, class_num):
     y2 = int(xyxy[3])
     img = img.copy()
 
+    # Dibujar la caja alrededor de la cara
     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), thickness=tl, lineType=cv2.LINE_AA)
 
-    clors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
+    # Calcular el centroide
+    centroid_x = (x1 + x2) / 2
+    centroid_y = (y1 + y2) / 2
+
+    # Dibujar el centroide como un círculo rojo
+    cv2.circle(img, (int(centroid_x), int(centroid_y)), tl + 2, (0, 0, 255), -1)
+
+    # Dibujar los landmarks (puntos de referencia de la cara)
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
 
     for i in range(5):
         point_x = int(landmarks[2 * i])
         point_y = int(landmarks[2 * i + 1])
-        cv2.circle(img, (point_x, point_y), tl + 1, clors[i], -1)
+        cv2.circle(img, (point_x, point_y), tl + 1, colors[i], -1)
 
+    # Mostrar el nivel de confianza
     tf = max(tl - 1, 1)  # font thickness
     label = str(conf)[:5]
     cv2.putText(
         img, label, (x1, y1 - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA
     )
-    return img
+
+    # Retornar la imagen y el centroide
+    return img, (centroid_x, centroid_y)
 
 
 def capture_video():
@@ -149,9 +161,11 @@ def capture_video():
                     landmarks = det[j, 5:15].view(-1).tolist()
                     class_num = det[j, 15].cpu().numpy()
 
-                    im0 = show_results(im0, xyxy, conf, landmarks, class_num)
+                    im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num)
+                    centroid_x, centroid_y = centroid
+                    print(f"Centroid X: {centroid_x} Centroid Y: {centroid_y}")
 
-        cv2.imshow("Video de la cámara", im0)
+        #cv2.imshow("Video de la cámara", im0)
 
         # Salir del bucle si se presiona la tecla 'q'
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -181,3 +195,18 @@ def start_video_capture():
 
 if __name__ == "__main__":
     start_video_capture()
+
+
+
+# def control_servos(centroid_x, centroid_y):
+#     # Aquí debes mapear las coordenadas del centroide a los ángulos de los servos
+#     # Ejemplo básico (ajusta según las dimensiones de tu imagen y los límites de los servos)
+#     servo_x_angle = map_value(centroid_x, 0, 1920, 0, 180)  # Mapea de píxeles a ángulos
+#     servo_y_angle = map_value(centroid_y, 0, 1080, 0, 180)
+
+#     # Mover servos (esto depende de cómo controles tus servos)
+#     move_servo_x(servo_x_angle)
+#     move_servo_y(servo_y_angle)
+
+# def map_value(value, input_min, input_max, output_min, output_max):
+#     return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
