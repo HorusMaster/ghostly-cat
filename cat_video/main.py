@@ -93,18 +93,18 @@ def show_results(img, xyxy, conf, landmarks, class_num):
     # Retornar la imagen y el centroide
     return img, (centroid_x, centroid_y)
 
-
 def capture_video(centroid_queue):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
+    print("Device is using: ", device)
     img_size = 640
     conf_thres = 0.6
-    iou_thres = 0.5
-    #skip_frames=3
-    print("Device is using: ", device)
+    iou_thres = 0.5  
+    last_processed_time = time.monotonic()
+    fps_interval = 1
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
-    "nvarguscamerasrc ! "
-        "video/x-raw(memory:NVMM), width=1280, height=720, framerate=30/1, format=NV12 ! "
+        "nvarguscamerasrc sensor-id=0 sensor-mode=4 ! "
+        "video/x-raw(memory:NVMM), width=1280, height=720, format=NV12, framerate=30/1 ! "
         "nvvidconv ! video/x-raw, format=BGRx ! "
         "videoconvert ! video/x-raw, format=BGR ! "
         "appsink max-buffers=1 drop=true"
@@ -118,11 +118,11 @@ def capture_video(centroid_queue):
         print("Error: No se pudo abrir la cámara.")
         return
     
-    print("OPENCV and camera LOADED")
+    print("OPENCV and camera loaded, loading model..")
     model = load_model("models/yolov5n-0.5.pt", device)
-    print("ModelLOADED")
+    print("Model Loaded")
 
-    #frame_count = 0
+  
     while True:
         # Capturar frame por frame
         try:
@@ -138,13 +138,13 @@ def capture_video(centroid_queue):
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-        # if frame_count % skip_frames != 0:
-        #     frame_count += 1
-        #     continue
+        current_time = time.monotonic()
+        if current_time - last_processed_time < fps_interval:
+            continue  # Si no ha pasado 1 segundo, continuar sin procesar
 
-        # frame_count += 1
-
-    
+        last_processed_time = current_time 
+        print("PROCESSING FRAME")
+        
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img0 = copy.deepcopy(orgimg)
         im0 = copy.deepcopy(frame)
