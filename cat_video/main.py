@@ -100,7 +100,7 @@ def capture_video(centroid_queue):
     conf_thres = 0.6
     iou_thres = 0.5  
     last_processed_time = time.monotonic()
-    fps_interval = 1
+    fps_interval = 0.5
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
         "nvarguscamerasrc sensor-id=0 sensor-mode=4 ! "
@@ -141,9 +141,7 @@ def capture_video(centroid_queue):
         current_time = time.monotonic()
         if current_time - last_processed_time < fps_interval:
             continue  # Si no ha pasado 1 segundo, continuar sin procesar
-
-        last_processed_time = current_time 
-        print("PROCESSING FRAME")
+        last_processed_time = current_time
         
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img0 = copy.deepcopy(orgimg)
