@@ -25,8 +25,7 @@
 		"--shm-size=16gb",
 		"--runtime=nvidia",		
 		"--ipc=host",		
-		"--device=/dev/video0",
-		"--device", "/dev/i2c-1",
+		"--device=/dev/video0",		
 		"-v", "/tmp/argus_socket:/tmp/argus_socket"
 	]
 }

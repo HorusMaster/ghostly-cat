@@ -23,6 +23,8 @@ def publish_centroid(telemetry: CatTelemetry):
     """Publica los centroides en formato JSON a través de MQTT."""
     payload = json.dumps(telemetry.to_dict())
     mqtt_client.publish(payload)
+    print(f"Published Centroids {payload}")
+
 
 def scale_coords_landmarks(img1_shape, coords, img0_shape, ratio_pad=None):
     # Rescale coords (xyxy) from img1_shape to img0_shape
@@ -93,8 +95,7 @@ def show_results(img, xyxy, conf, landmarks, class_num):
 
 
 def capture_video(centroid_queue):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model("models/yolov5n-face.pt", device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
     img_size = 640
     conf_thres = 0.6
     iou_thres = 0.5
@@ -114,6 +115,9 @@ def capture_video(centroid_queue):
     if not cap.isOpened():
         print("Error: No se pudo abrir la cámara.")
         return
+    
+    print("OPENCV and camera LOADED")
+    model = load_model("models/yolov5n-face.pt", device)
 
     while True:
         # Capturar frame por frame
@@ -130,6 +134,7 @@ def capture_video(centroid_queue):
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
+    
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img0 = copy.deepcopy(orgimg)
         im0 = copy.deepcopy(frame)
@@ -154,7 +159,7 @@ def capture_video(centroid_queue):
         # Inference
         pred = model(img)[0]
         pred = non_max_suppression_face(pred, conf_thres, iou_thres)
-        # print(len(pred[0]), "face" if len(pred[0]) == 1 else "faces")
+        #print(len(pred[0]), "face" if len(pred[0]) == 1 else "faces")
 
         for i, det in enumerate(pred):  # detections per image
             if len(det):
@@ -180,7 +185,7 @@ def capture_video(centroid_queue):
                     telemetry = CatTelemetry(centroid_x=centroid_x, centroid_y=centroid_y)
                     centroid_queue.put(telemetry)
 
-        # cv2.imshow("Video de la cámara", im0)
+        #cv2.imshow("Video de la cámara", im0)
 
         # Salir del bucle si se presiona la tecla 'q'
 
@@ -204,7 +209,7 @@ def start_video_capture():
                 publish_centroid(telemetry)
             time.sleep(0.5)
     except KeyboardInterrupt:
-        print("Interrupción detectada, cerrando proceso.")
+        print("Interrupcion detectada, cerrando proceso.")
     finally:
         if process.is_alive():
             process.terminate()

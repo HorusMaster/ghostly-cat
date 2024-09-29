@@ -37,8 +37,13 @@ class MQTTClient:
     def publish(self, payload):
         self.client.publish(MQTT_TOPIC, payload)
 
-    def on_connect(self, client, userdata, flags, rc):
-        print(f"Conectado a MQTT Broker con código {rc}")
+    def on_connect(self, client, userdata, flags, rc):       
+        message = f"Conectado a MQTT Broker con código {str(rc)}"
+        try:
+            print(message)  # Simplemente imprime el mensaje directamente
+        except UnicodeEncodeError:
+            # En caso de error con la codificación ASCII, se reemplazan los caracteres especiales.
+            print(message.encode('ascii', 'replace').decode('ascii'))
         client.subscribe(MQTT_TOPIC)
 
     def disconnect(self):       

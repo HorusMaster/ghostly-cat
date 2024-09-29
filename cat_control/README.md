@@ -9,7 +9,12 @@ docker build -f ./Dockerfile ../ -t cat_control
 
 To run the container
 ```
-docker run -it cat_control -e BLINKA_FORCEBOARD=JETSON_NANO
+docker run  -it --rm \
+            --privileged \
+            --network host \
+            -e BLINKA_FORCEBOARD=JETSON_NANO \
+            --device /dev/i2c-1 \
+            cat_control
 ```
 
 # Detect devices

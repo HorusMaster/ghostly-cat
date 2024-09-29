@@ -12,13 +12,15 @@ To run the container
 ```
 docker run -it  --rm \
                 --privileged \
+                --shm-size 16gb \
                 --runtime nvidia \
                 --network host \
-                --ipc host \
+                --ipc=host \
                 --device /dev/video0 \
                 --volume /tmp/argus_socket:/tmp/argus_socket \
                 cat_video
 ```
+
 
 # Detect devices
 sudo i2cdetect -y -r 1

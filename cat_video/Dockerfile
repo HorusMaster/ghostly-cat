@@ -31,4 +31,8 @@ RUN pip3 install /code/cat_common
 COPY cat_video /code/cat_video/
 WORKDIR /code/cat_video
 
+EXPOSE 1883
+
+CMD ["python3", "main.py"]
+
 
