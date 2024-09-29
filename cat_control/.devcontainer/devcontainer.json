@@ -1,8 +1,8 @@
 {
-	"name": "Existing Dockerfile",
+	"name": "Cat Control",
 	"build": {
 		// Sets the run context to one level up instead of the .devcontainer folder.
-		"context": "..",
+		"context": "../..",
 		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
 		"dockerfile": "../Dockerfile"
 	},
@@ -10,7 +10,8 @@
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
-				"ms-python.vscode-pylance"
+				"ms-python.vscode-pylance",
+				"zhuangtongfa.material-theme"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/code/cat_control/.venv/bin/python"
@@ -18,13 +19,13 @@
 		}
 	},
 	"workspaceFolder": "/workspaces/ghostly-cat",
-	"containerEnv": {	
+	"containerEnv": {
 		"BLINKA_FORCEBOARD":"JETSON_NANO",
 		"ENV": "dev"
 	},
 	"runArgs": [
 		"--privileged",
-		"--device", "/dev/i2c-1",
-		"-v", "/usr/lib/python3/dist-packages/Jetson/GPIO:/usr/lib/python3/dist-packages/Jetson/GPIO"
+		"--network=host",
+		"--device", "/dev/i2c-1"		
 	]
 }

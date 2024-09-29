@@ -1,4 +1,5 @@
-adafruit-circuitpython-servokit
+adafruit-circuitpython-servokit==1.3.9
+Jetson.GPIO==2.1.6
 pylint==2.17.7
 isort
 black==24.1.0

@@ -6,12 +6,33 @@ from models.experimental import attempt_load
 import copy
 from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression_face, scale_coords
+import json
 
+MQTT_BROKER = "localhost"  # Cambia esto por la IP del contenedor con el broker Mosquitto
+MQTT_PORT = 1883
+MQTT_TOPIC = "cat/telemetry"
+
+client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print(f"Conectado a MQTT Broker con código {rc}")
+
+# Conectar al broker
+client.on_connect = on_connect
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+# Iniciar el loop de MQTT en un hilo separado
+client.loop_start()
 
 def load_model(weights, device):
     model = attempt_load(weights, map_location=device)  # load FP32 model
     return model
 
+def publish_centroid(centroid_x, centroid_y):
+    """ Publica los centroides en formato JSON a través de MQTT. """
+    payload = json.dumps({"centroid_x": centroid_x, "centroid_y": centroid_y})
+    client.publish(MQTT_TOPIC, payload)
+    print(f"Centroid publicado: {payload}")
 
 def scale_coords_landmarks(img1_shape, coords, img0_shape, ratio_pad=None):
     # Rescale coords (xyxy) from img1_shape to img0_shape
@@ -163,7 +184,7 @@ def capture_video():
 
                     im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num)
                     centroid_x, centroid_y = centroid
-                    print(f"Centroid X: {centroid_x} Centroid Y: {centroid_y}")
+                    publish_centroid(centroid_x, centroid_y)
 
         #cv2.imshow("Video de la cámara", im0)
 

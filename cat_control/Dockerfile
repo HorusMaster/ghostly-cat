@@ -30,12 +30,15 @@ ENV VIRTUAL_ENV=/code/cat_control/.venv
 RUN python3.10 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-COPY requirements.txt /code/cat_control/requirements.txt
+COPY cat_control/requirements.txt /code/cat_control/requirements.txt
 RUN pip3 install -r /code/cat_control/requirements.txt
 
 #COPY ./.flake8 ./pyproject.toml /code/
 
-COPY . /code/cat_control/
+COPY cat_common /code/cat_common
+RUN pip3 install /code/cat_common
+
+COPY cat_control /code/cat_control/
 WORKDIR /code/cat_control
 
 CMD ["python3", "main.py"]

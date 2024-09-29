@@ -19,13 +19,16 @@ RUN apt-get remove -y python3-yaml
 
 RUN pip3 install --upgrade pip
 
-COPY requirements.txt /code/requirements.txt
+COPY cat_video/requirements.txt /code/requirements.txt
 RUN pip3 install --no-deps -r /code/requirements.txt
 
 RUN git clone https://github.com/deepcam-cn/yolov5-face.git /code/yolov5
 ENV PYTHONPATH="${PYTHONPATH}:/code/yolov5"
 
-COPY . /code/cat_video/
+COPY cat_common /code/cat_common
+RUN pip3 install /code/cat_common
+
+COPY cat_video /code/cat_video/
 WORKDIR /code/cat_video
 
 

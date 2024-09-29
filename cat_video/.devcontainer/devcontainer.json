@@ -1,8 +1,8 @@
 {
-	"name": "Existing Dockerfile",
+	"name": "Cat Video",
 	"build": {
 		// Sets the run context to one level up instead of the .devcontainer folder.
-		"context": "..",
+		"context": "../..",
 		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
 		"dockerfile": "../Dockerfile"
 	},
@@ -10,19 +10,23 @@
 		"vscode": {
 			"extensions": [
 				"ms-python.python",
-				"ms-python.vscode-pylance"
+				"ms-python.vscode-pylance",
+				"zhuangtongfa.material-theme"
 			]
 		}
 	},
-	"workspaceFolder": "/workspaces/ghostly-cat/cat_video",
-	"containerEnv": {		
+	"workspaceFolder": "/workspaces/ghostly-cat",
+	"containerEnv": {
 		"ENV": "dev"
 	},
-	"runArgs": [
+	"runArgs": [		
 		"--privileged",
-		"--runtime", "nvidia",
-		"--ipc", "host",
-		"--device", "/dev/video0",
+		"--shm-size=16gb",
+		"--runtime=nvidia",
+		"--network=host",
+		"--ipc=host",		
+		"--device=/dev/video0",
+		"--device", "/dev/i2c-1",
 		"-v", "/tmp/argus_socket:/tmp/argus_socket"
 	]
 }

@@ -4,7 +4,8 @@
 
 To Build the container
 ```
-docker build -t cat_video . 
+cd ~/ghostly-cat/cat_video
+docker build -f ./Dockerfile ../ -t cat_video
 ```
 
 To run the container

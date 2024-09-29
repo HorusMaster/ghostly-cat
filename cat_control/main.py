@@ -1,16 +1,17 @@
-import sys
+
 import asyncio
 
-sys.path.append("/usr/lib/python3/dist-packages")
-
 from adafruit_servokit import ServoKit
+from mqtt_comms import MQTTClient
 
 # Definición de canales para los servos
 LEFT_RIGHT = 0
 UP_DOWN = 1
 
+
 # Inicialización del controlador de servos
 kit = ServoKit(channels=16, address=0x40)
+mqtt_client = MQTTClient()
 
 
 async def move_servo_with_steps(servo_channel, target_angle, current_angle, steps=10):
