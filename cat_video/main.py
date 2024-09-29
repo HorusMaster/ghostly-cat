@@ -7,32 +7,22 @@ import copy
 from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression_face, scale_coords
 import json
+from cat_common.mqtt_messages import CatTelemetry, MQTTClient
 
-MQTT_BROKER = "localhost"  # Cambia esto por la IP del contenedor con el broker Mosquitto
-MQTT_PORT = 1883
-MQTT_TOPIC = "cat/telemetry"
 
-client = mqtt.Client()
+mqtt_client = MQTTClient()
+mqtt_client.client_start()
 
-def on_connect(client, userdata, flags, rc):
-    print(f"Conectado a MQTT Broker con código {rc}")
-
-# Conectar al broker
-client.on_connect = on_connect
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
-
-# Iniciar el loop de MQTT en un hilo separado
-client.loop_start()
 
 def load_model(weights, device):
     model = attempt_load(weights, map_location=device)  # load FP32 model
     return model
 
-def publish_centroid(centroid_x, centroid_y):
-    """ Publica los centroides en formato JSON a través de MQTT. """
-    payload = json.dumps({"centroid_x": centroid_x, "centroid_y": centroid_y})
-    client.publish(MQTT_TOPIC, payload)
-    print(f"Centroid publicado: {payload}")
+
+def publish_centroid(telemetry: CatTelemetry):
+    """Publica los centroides en formato JSON a través de MQTT."""
+    payload = json.dumps(telemetry.to_dict())
+    mqtt_client.publish(payload)
 
 def scale_coords_landmarks(img1_shape, coords, img0_shape, ratio_pad=None):
     # Rescale coords (xyxy) from img1_shape to img0_shape
@@ -102,7 +92,7 @@ def show_results(img, xyxy, conf, landmarks, class_num):
     return img, (centroid_x, centroid_y)
 
 
-def capture_video():
+def capture_video(centroid_queue):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model("models/yolov5n-face.pt", device)
     img_size = 640
@@ -137,6 +127,9 @@ def capture_video():
             print("Error: No se pudo recibir el frame.")
             break
 
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
         orgimg = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img0 = copy.deepcopy(orgimg)
         im0 = copy.deepcopy(frame)
@@ -161,7 +154,7 @@ def capture_video():
         # Inference
         pred = model(img)[0]
         pred = non_max_suppression_face(pred, conf_thres, iou_thres)
-        print(len(pred[0]), "face" if len(pred[0]) == 1 else "faces")
+        # print(len(pred[0]), "face" if len(pred[0]) == 1 else "faces")
 
         for i, det in enumerate(pred):  # detections per image
             if len(det):
@@ -184,13 +177,12 @@ def capture_video():
 
                     im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num)
                     centroid_x, centroid_y = centroid
-                    publish_centroid(centroid_x, centroid_y)
+                    telemetry = CatTelemetry(centroid_x=centroid_x, centroid_y=centroid_y)
+                    centroid_queue.put(telemetry)
 
-        #cv2.imshow("Video de la cámara", im0)
+        # cv2.imshow("Video de la cámara", im0)
 
         # Salir del bucle si se presiona la tecla 'q'
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
 
     # Liberar la cámara y cerrar las ventanas
     cap.release()
@@ -199,12 +191,17 @@ def capture_video():
 
 def start_video_capture():
     # Crear un proceso para la captura de video
-    process = multiprocessing.Process(target=capture_video)
+    centroid_queue = multiprocessing.Queue()
+
+    process = multiprocessing.Process(target=capture_video, args=(centroid_queue,))
     process.start()
 
     # Esperar a que el proceso termine
     try:
         while process.is_alive():
+            if not centroid_queue.empty():
+                telemetry = centroid_queue.get()
+                publish_centroid(telemetry)
             time.sleep(0.5)
     except KeyboardInterrupt:
         print("Interrupción detectada, cerrando proceso.")
@@ -216,18 +213,3 @@ def start_video_capture():
 
 if __name__ == "__main__":
     start_video_capture()
-
-
-
-# def control_servos(centroid_x, centroid_y):
-#     # Aquí debes mapear las coordenadas del centroide a los ángulos de los servos
-#     # Ejemplo básico (ajusta según las dimensiones de tu imagen y los límites de los servos)
-#     servo_x_angle = map_value(centroid_x, 0, 1920, 0, 180)  # Mapea de píxeles a ángulos
-#     servo_y_angle = map_value(centroid_y, 0, 1080, 0, 180)
-
-#     # Mover servos (esto depende de cómo controles tus servos)
-#     move_servo_x(servo_x_angle)
-#     move_servo_y(servo_y_angle)
-
-# def map_value(value, input_min, input_max, output_min, output_max):
-#     return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min

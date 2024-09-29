@@ -9,7 +9,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.python",
+				"ms-python.python@2024.15.2024092702",
 				"ms-python.vscode-pylance",
 				"zhuangtongfa.material-theme"
 			]
@@ -21,9 +21,9 @@
 	},
 	"runArgs": [		
 		"--privileged",
-		"--shm-size=16gb",
-		"--runtime=nvidia",
 		"--network=host",
+		"--shm-size=16gb",
+		"--runtime=nvidia",		
 		"--ipc=host",		
 		"--device=/dev/video0",
 		"--device", "/dev/i2c-1",
