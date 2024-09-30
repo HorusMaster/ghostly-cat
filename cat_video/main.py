@@ -55,14 +55,58 @@ def scale_coords_landmarks(img1_shape, coords, img0_shape, ratio_pad=None):
     coords[:, 9].clamp_(0, img0_shape[0])  # y5
     return coords
 
+def calculate_centroid(xyxy, min_area=500):
+    """
+    Calcula el centroide de los bounding boxes y filtra por tamaño.
 
-def show_results(img, xyxy, conf, landmarks, class_num):
+    Parámetros:
+    - xyxy: Lista de coordenadas [x1, y1, x2, y2] que definen el bounding box.
+    - min_area: Área mínima requerida para considerar el bounding box.
+
+    Retorna:
+    - centroid: Una tupla con las coordenadas (centroid_x, centroid_y) del centroide si pasa el filtro.
+    - None: Si el bounding box es demasiado pequeño.
+    """
+    x1 = int(xyxy[0])
+    y1 = int(xyxy[1])
+    x2 = int(xyxy[2])
+    y2 = int(xyxy[3])
+
+    # Calcular el área del bounding box
+    bbox_width = x2 - x1
+    bbox_height = y2 - y1
+    bbox_area = bbox_width * bbox_height
+
+    # Filtrar bounding boxes que no cumplan con el tamaño mínimo
+    if bbox_area < min_area:
+        return None  # No retornar nada si el área es menor al umbral
+
+    # Calcular el centroide
+    centroid_x = (x1 + x2) / 2
+    centroid_y = (y1 + y2) / 2
+
+    # Retornar el centroide
+    return (centroid_x, centroid_y)
+
+
+
+def show_results(img, xyxy, conf, landmarks, class_num, min_area=500):
     h, w, c = img.shape
     tl = 1 or round(0.002 * (h + w) / 2) + 1  # line/font thickness
     x1 = int(xyxy[0])
     y1 = int(xyxy[1])
     x2 = int(xyxy[2])
     y2 = int(xyxy[3])
+    
+    # Calcular el área del bounding box
+    bbox_width = x2 - x1
+    bbox_height = y2 - y1
+    bbox_area = bbox_width * bbox_height
+
+    # Filtrar bounding boxes que no cumplan con el tamaño mínimo
+    if bbox_area < min_area:
+        return img, None  # No retornamos el centroide si el área es menor al umbral
+    
     img = img.copy()
 
     # Dibujar la caja alrededor de la cara
@@ -90,7 +134,7 @@ def show_results(img, xyxy, conf, landmarks, class_num):
         img, label, (x1, y1 - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA
     )
 
-    # Retornar la imagen y el centroide
+    # Retornar la imagen y el centroide si pasa el filtro de área
     return img, (centroid_x, centroid_y)
 
 def capture_video(centroid_queue):
@@ -101,6 +145,7 @@ def capture_video(centroid_queue):
     iou_thres = 0.5  
     last_processed_time = time.monotonic()
     fps_interval = 0.5
+    min_area=500
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
         "nvarguscamerasrc sensor-id=0 sensor-mode=4 ! "
@@ -184,14 +229,16 @@ def capture_video(centroid_queue):
 
                 for j in range(det.size()[0]):
                     xyxy = det[j, :4].view(-1).tolist()
-                    conf = det[j, 4].cpu().numpy()
-                    landmarks = det[j, 5:15].view(-1).tolist()
-                    class_num = det[j, 15].cpu().numpy()
+                    #conf = det[j, 4].cpu().numpy()
+                    #landmarks = det[j, 5:15].view(-1).tolist()
+                    #class_num = det[j, 15].cpu().numpy()
 
-                    im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num)
-                    centroid_x, centroid_y = centroid
-                    telemetry = CatTelemetry(centroid_x=centroid_x, centroid_y=centroid_y)
-                    centroid_queue.put(telemetry)
+                    #im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num, min_area=min_area)
+                    centroids = calculate_centroid(xyxy, 500)
+                    if centroids:
+                        centroid_x, centroid_y = centroids
+                        telemetry = CatTelemetry(centroid_x=centroid_x, centroid_y=centroid_y)
+                        centroid_queue.put(telemetry)
 
         #cv2.imshow("Video de la cámara", im0)
 
