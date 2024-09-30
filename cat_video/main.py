@@ -145,7 +145,7 @@ def capture_video(centroid_queue):
     iou_thres = 0.5  
     last_processed_time = time.monotonic()
     fps_interval = 0.5
-    min_area=500
+    min_area=10000
     # Definir el pipeline GStreamer para utilizar nvarguscamerasrc
     gst_pipeline = (
         "nvarguscamerasrc sensor-id=0 sensor-mode=4 ! "
@@ -234,7 +234,7 @@ def capture_video(centroid_queue):
                     #class_num = det[j, 15].cpu().numpy()
 
                     #im0, centroid = show_results(im0, xyxy, conf, landmarks, class_num, min_area=min_area)
-                    centroids = calculate_centroid(xyxy, 500)
+                    centroids = calculate_centroid(xyxy, min_area)
                     if centroids:
                         centroid_x, centroid_y = centroids
                         telemetry = CatTelemetry(centroid_x=centroid_x, centroid_y=centroid_y)

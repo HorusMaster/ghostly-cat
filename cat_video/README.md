@@ -15,6 +15,7 @@ docker run -it  --rm \
                 --shm-size 16gb \
                 --runtime nvidia \
                 --network host \
+                --gpus=all \
                 --ipc=host \
                 --device /dev/video0 \
                 --volume /tmp/argus_socket:/tmp/argus_socket \
