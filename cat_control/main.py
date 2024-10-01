@@ -7,14 +7,14 @@ import queue
 import random
 # Definición de canales para los servos
 LEFT_RIGHT = 0
-UP_DOWN = 1
+UP_DOWN = 12
 TAIL = 2
 
 
 SERVO_X_MIN = 0
-SERVO_X_MAX = 100
-SERVO_Y_MIN = 0
-SERVO_Y_MAX = 30
+SERVO_X_MAX = 140
+SERVO_Y_MIN = 100
+SERVO_Y_MAX = 150
 IMAGE_WIDTH = 1280
 IMAGE_HEIGHT = 720
 
@@ -26,7 +26,7 @@ class ServoController:
         self.mqtt_client = MQTTClient()
         self.mqtt_client.run()
         self.current_angle_x = 50  # Ángulo inicial del servo X
-        self.current_angle_y = 0   # Ángulo inicial del servo Y
+        self.current_angle_y = 120   # Ángulo inicial del servo Y
         self.current_angle_tail = DEFAULT_ANGLE_TAIL 
 
     async def move_servo_x(self, target_angle):
@@ -114,14 +114,14 @@ class ServoController:
     async def default_position(self):
         # Configura los servos en la posición predeterminada
         await self.move_servo_x(50)
-        await self.move_servo_y(0)
+        await self.move_servo_y(120)
         await self.move_servo_tail(DEFAULT_ANGLE_TAIL)
         await asyncio.sleep(1)
 
     async def configure_servos(self):
         # Configura los rangos de ancho de pulso para cada servo
-        self.kit.servo[LEFT_RIGHT].set_pulse_width_range(800, 2500)
-        self.kit.servo[UP_DOWN].set_pulse_width_range(600, 2250)
+        self.kit.servo[LEFT_RIGHT].set_pulse_width_range(700, 2300)
+        self.kit.servo[UP_DOWN].set_pulse_width_range(1000, 2500)
         self.kit.servo[TAIL].set_pulse_width_range(1000, 2500)
 
     async def main(self):
