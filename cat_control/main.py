@@ -2,79 +2,158 @@ import asyncio
 import json
 from adafruit_servokit import ServoKit
 from cat_common.mqtt_messages import CatTelemetry, MQTTClient
-from threading import Thread
-import queue
+from abc import ABC
 import random
-# Definición de canales para los servos
-LEFT_RIGHT = 0
-UP_DOWN = 12
-TAIL = 2
+import queue
+import signal
 
-
-SERVO_X_MIN = 0
-SERVO_X_MAX = 140
-SERVO_Y_MIN = 100
-SERVO_Y_MAX = 150
 IMAGE_WIDTH = 1280
 IMAGE_HEIGHT = 720
 
-DEFAULT_ANGLE_TAIL = 180
+class AbstractServo(ABC):
+    current_angle: int 
+    min_angle: int 
+    max_angle: int 
+    pulse_min: int 
+    pulse_max: int 
+
+    def __init__(self, servo_channel, kit):
+        self.servo_channel = servo_channel
+        self.kit = kit      
+        # Configurar el rango de pulso
+        self.kit.servo[self.servo_channel].set_pulse_width_range(self.pulse_min, self.pulse_max)
+
+    async def move_servo(self, target_angle):
+        """ Mueve el servo directamente a un ángulo específico y espera 1 segundo. """
+        target_angle = max(self.min_angle, min(self.max_angle, target_angle))
+        self.kit.servo[self.servo_channel].angle = target_angle
+        self.current_angle = target_angle
+        print(f"Servo {self.servo_channel} movido directamente a {target_angle}°")
+        await asyncio.sleep(1)
+
+    async def move_servo_with_steps(self, target_angle, steps=20):
+        """ Mueve el servo suavemente desde el ángulo actual hacia el ángulo objetivo en pasos. """
+        step_size = (target_angle - self.current_angle) / steps
+        total_time = abs(target_angle - self.current_angle) * 0.005
+        step_delay = total_time / steps
+
+        for _ in range(steps):
+            self.current_angle += step_size
+            self.current_angle = max(self.min_angle, min(self.max_angle, self.current_angle))
+            self.kit.servo[self.servo_channel].angle = self.current_angle
+            await asyncio.sleep(step_delay)
+
+        print(f"Servo {self.servo_channel} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
+        self.current_angle = target_angle
+
+    async def move_naturally(self):
+        """ Mueve el servo de forma natural como la cola de un gato, con oscilaciones controladas. """
+        while True:
+            # Definir patrones de oscilación, con movimientos hacia los extremos y variaciones menores
+            pattern_type = random.choice(["oscillation", "hold", "small_variation"])
+
+            if pattern_type == "oscillation":
+                # Oscilar entre los extremos (mínimo y máximo)
+                for _ in range(random.randint(2, 5)):  # Moverse varias veces entre mínimo y máximo
+                    await self.move_servo_with_steps(self.max_angle, steps=random.randint(10, 30))
+                    await asyncio.sleep(random.uniform(0.5, 1.5))
+                    await self.move_servo_with_steps(self.min_angle, steps=random.randint(10, 30))
+                    await asyncio.sleep(random.uniform(0.5, 1.5))
+
+            elif pattern_type == "hold":
+                # Mantenerse en una posición por un tiempo
+                target_angle = random.choice([self.min_angle, self.max_angle])  # Mantenerse en un extremo
+                await self.move_servo(target_angle)
+                await asyncio.sleep(random.uniform(2, 5))  # Mantenerse quieto por más tiempo
+
+            elif pattern_type == "small_variation":
+                # Pequeñas variaciones cercanas al ángulo actual (como pequeños temblores)
+                for _ in range(random.randint(3, 6)):
+                    current_angle = self.current_angle
+                    small_variation = random.randint(-10, 10)  # Variaciones pequeñas
+                    target_angle = max(self.min_angle, min(self.max_angle, current_angle + small_variation))
+                    await self.move_servo_with_steps(target_angle, steps=random.randint(5, 15))
+                    await asyncio.sleep(random.uniform(0.2, 0.5))
+
+class TailServo(AbstractServo):
+    ADDRESS = 2  # Dirección del servo para la cola
+    current_angle = 120
+    min_angle = 0
+    max_angle = 120
+    pulse_min = 600
+    pulse_max = 2500
+
+    def __init__(self, kit):
+        super().__init__(TailServo.ADDRESS, kit)
+
+
+class MouthServo(AbstractServo):
+    ADDRESS = 8  # Dirección del servo para la boca
+    current_angle = 40
+    min_angle = 0
+    max_angle = 40
+    pulse_min = 600
+    pulse_max = 2500
+
+    def __init__(self, kit):
+        super().__init__(MouthServo.ADDRESS, kit)
+
+
+class LeftRightServo(AbstractServo):
+    ADDRESS = 0  # Dirección del servo para el movimiento izquierda/derecha
+    current_angle = 50
+    min_angle = 0
+    max_angle = 140
+    pulse_min = 700
+    pulse_max = 2300
+
+    def __init__(self, kit):
+        super().__init__(LeftRightServo.ADDRESS, kit)
+
+
+class UpDownServo(AbstractServo):
+    ADDRESS = 12  # Dirección del servo para el movimiento arriba/abajo
+    current_angle = 120
+    min_angle = 100
+    max_angle = 150
+    pulse_min = 1000
+    pulse_max = 2500
+
+    def __init__(self, kit):
+        super().__init__(UpDownServo.ADDRESS, kit)
+
 
 class ServoController:
     def __init__(self):
         self.kit = ServoKit(channels=16, address=0x40)
+
+        # Instanciar servos con sus valores constantes definidos en cada subclase
+        self.tail_servo = TailServo(self.kit)
+        self.mouth_servo = MouthServo(self.kit)
+        self.left_right_servo = LeftRightServo(self.kit)
+        self.up_down_servo = UpDownServo(self.kit)
         self.mqtt_client = MQTTClient()
         self.mqtt_client.run()
-        self.current_angle_x = 50  # Ángulo inicial del servo X
-        self.current_angle_y = 120   # Ángulo inicial del servo Y
-        self.current_angle_tail = DEFAULT_ANGLE_TAIL 
 
-    async def move_servo_x(self, target_angle):
-        """ Controla el servo X suavemente. """
-        print(f"Moviendo servo X suavemente a {target_angle} grados")
-        await self.move_servo_with_steps(LEFT_RIGHT, target_angle, self.current_angle_x)
-        self.current_angle_x = target_angle  # Actualiza el ángulo actual
 
-    async def move_servo_y(self, target_angle):
-        """ Controla el servo Y suavemente. """
-        print(f"Moviendo servo Y suavemente a {target_angle} grados")
-        await self.move_servo_with_steps(UP_DOWN, target_angle, self.current_angle_y)
-        self.current_angle_y = target_angle  # Actualiza el ángulo actual
-
-    async def move_servo_tail(self, target_angle):        
-        print(f"Moviendo servo Tail suavemente a {target_angle} grados")
-        await self.move_servo_with_steps(TAIL, target_angle, self.current_angle_y)
-        self.current_angle_tail = target_angle  # Actualiza el ángulo actual
+    async def default_position(self):
+        """ Coloca todos los servos en su posición predeterminada usando `move_servo`. """
+        await self.tail_servo.move_servo(self.tail_servo.current_angle)
+        await self.mouth_servo.move_servo(self.mouth_servo.current_angle)
+        await self.left_right_servo.move_servo(self.left_right_servo.current_angle)
+        await self.up_down_servo.move_servo(self.up_down_servo.current_angle)
 
     def map_value(self, value, input_min, input_max, output_min, output_max):
         return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
 
     async def control_servos(self, centroid_x, centroid_y):
         """ Mapea las coordenadas del centroide a los ángulos de los servos y los mueve suavemente. """
-        servo_x_angle = self.map_value(centroid_x, 0, IMAGE_WIDTH, SERVO_X_MAX, SERVO_X_MIN)
-        servo_y_angle = self.map_value(centroid_y, 0, IMAGE_HEIGHT, SERVO_Y_MAX, SERVO_Y_MIN)
+        servo_left_right_mapped_angle = self.map_value(centroid_x, 0, IMAGE_WIDTH, self.left_right_servo.max_angle, self.left_right_servo.min_angle)
+        servo_up_down_mapped_angle = self.map_value(centroid_y, 0, IMAGE_HEIGHT, self.up_down_servo.max_angle, self.up_down_servo.min_angle)
 
         # Mover los servos suavemente a los ángulos calculados
-        await self.move_servo_x(servo_x_angle)
-        await self.move_servo_y(servo_y_angle)
-
-    async def move_servo_with_steps(self, servo_channel, target_angle, current_angle, steps=20):
-        # Calcula el tamaño del paso
-        step_size = (target_angle - current_angle) / steps
-
-        # Calcula el tiempo total estimado para el movimiento y lo divide entre los pasos
-        total_angle_difference = abs(target_angle - current_angle)
-        total_time = (total_angle_difference / 60) * 0.32  # 0.32 segundos por cada 60 grados
-        step_delay = total_time / steps  # Tiempo de espera por cada paso
-
-        # Mueve el servo gradualmente en pequeños pasos
-        for step in range(steps):
-            current_angle += step_size
-            current_angle = max(0, min(180, current_angle))  # Asegúrate de que el ángulo esté en el rango permitido
-            self.kit.servo[servo_channel].angle = current_angle
-            await asyncio.sleep(step_delay)
-
-        print(f"Servo {servo_channel} movido suavemente a {target_angle}° en {total_time:.2f} segundos")
+        await self.left_right_servo.move_servo_with_steps(servo_left_right_mapped_angle, 20)
+        await self.up_down_servo.move_servo_with_steps(servo_up_down_mapped_angle, 20)
 
     async def process_mqtt_messages(self):
         while True:
@@ -94,65 +173,40 @@ class ServoController:
             except Exception as exc:
                 print(exc)
 
-    async def routine_servo_cycles(self, servo_channel, default_angle, target_angle, cycles=5, steps=20, forever=False):
-        """
-        Función genérica para mover un servo en múltiples ciclos entre 0 y el ángulo objetivo.
-        """              
-        current_angle = default_angle
-        self.kit.servo[servo_channel].angle = default_angle
-        await asyncio.sleep(1)
-        if forever:
-            while True:      
-                for _ in range(cycles):          
-                    await self.move_servo_with_steps(servo_channel, target_angle, current_angle, steps=steps)
-                    current_angle = target_angle
-                    await self.move_servo_with_steps(servo_channel, default_angle, current_angle, steps=steps)
-                    current_angle = default_angle
-                await asyncio.sleep(random.randint(1, 5))
-       
-
-    async def default_position(self):
-        # Configura los servos en la posición predeterminada
-        await self.move_servo_x(50)
-        await self.move_servo_y(120)
-        await self.move_servo_tail(DEFAULT_ANGLE_TAIL)
-        await asyncio.sleep(1)
-
-    async def configure_servos(self):
-        # Configura los rangos de ancho de pulso para cada servo
-        self.kit.servo[LEFT_RIGHT].set_pulse_width_range(700, 2300)
-        self.kit.servo[UP_DOWN].set_pulse_width_range(1000, 2500)
-        self.kit.servo[TAIL].set_pulse_width_range(1000, 2500)
 
     async def main(self):
-        # Configurar servos y establecer posición predeterminada
-        await self.configure_servos()
         await self.default_position()
 
-        # # Ejecutar las rutinas de los servos al mismo tiempo usando asyncio.gather
-        # await self.routine_servo_cycles(
-        #         LEFT_RIGHT, target_angle=100, cycles=1
-        #     ),  # Mover el servo del canal 0 (izquierda/derecha)
-        # await self.routine_servo_cycles(
-        #         UP_DOWN, target_angle=30, cycles=1, steps=100
-        #     ),  # Mover el servo del canal 1 (arriba/abajo)
-       
-        await asyncio.gather(           
-        self.process_mqtt_messages(),
-        self.routine_servo_cycles(
-            TAIL, default_angle=DEFAULT_ANGLE_TAIL, target_angle=0, steps=10, forever=True
-            ),  
+        # Ejecutar los movimientos naturales de cada servo
+        await asyncio.gather(
+            self.process_mqtt_messages(),
+            self.tail_servo.move_naturally(),      
+            self.mouth_servo.move_naturally(),            
         )
 
-        # Regresar a la posición predeterminada
-        await self.default_position()
+    async def shutdown(self):
+        """Cancel all tasks and gracefully stop the loop."""
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        for task in tasks:
+            task.cancel()
 
-# Ejecutar la clase ServoController
+        await asyncio.gather(*tasks, return_exceptions=True)
+        print("Tasks have been cancelled.")
+
+def shutdown_handler(loop, servo_controller):
+    asyncio.create_task(servo_controller.shutdown())
+
 if __name__ == '__main__':
     servo_controller = ServoController()
+    loop = asyncio.get_event_loop()
+
+    # Handle signals for graceful shutdown
+    for signame in ('SIGINT', 'SIGTERM'):
+        loop.add_signal_handler(getattr(signal, signame), shutdown_handler, loop, servo_controller)
+
     try:
-        asyncio.run(servo_controller.main())
-    except Exception:
-        print("Terminated")
+        loop.run_until_complete(servo_controller.main())
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        print("Shutting down gracefully...")
     finally:
-        servo_controller.mqtt_client.disconnect()
+        loop.close()
