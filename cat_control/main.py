@@ -28,7 +28,7 @@ class AbstractServo(ABC):
         target_angle = max(self.min_angle, min(self.max_angle, target_angle))
         self.kit.servo[self.servo_channel].angle = target_angle
         self.current_angle = target_angle
-        print(f"Servo {self.servo_channel} movido directamente a {target_angle}°")
+        print(f"Servo {self.__class__.__name__} movido directamente a {target_angle}°")
         await asyncio.sleep(1)
 
     async def move_servo_with_steps(self, target_angle, steps=20):
@@ -43,7 +43,7 @@ class AbstractServo(ABC):
             self.kit.servo[self.servo_channel].angle = self.current_angle
             await asyncio.sleep(step_delay)
 
-        print(f"Servo {self.servo_channel} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
+        print(f"Servo {self.__class__.__name__} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
         self.current_angle = target_angle
 
     async def move_naturally(self):
@@ -122,6 +122,17 @@ class UpDownServo(AbstractServo):
     def __init__(self, kit):
         super().__init__(UpDownServo.ADDRESS, kit)
 
+class EyeBrightnessControl(AbstractServo):
+    ADDRESS = 4  # Canal para el brillo de los ojos
+    current_angle = 120
+    min_angle = 0
+    max_angle = 180
+    pulse_min = 600
+    pulse_max = 2500
+
+    def __init__(self, kit):
+        super().__init__(EyeBrightnessControl.ADDRESS, kit)
+
 
 class ServoController:
     def __init__(self):
@@ -132,6 +143,7 @@ class ServoController:
         self.mouth_servo = MouthServo(self.kit)
         self.left_right_servo = LeftRightServo(self.kit)
         self.up_down_servo = UpDownServo(self.kit)
+        self.eye_brightness = EyeBrightnessControl(self.kit)
         self.mqtt_client = MQTTClient()
         self.mqtt_client.run()
 
@@ -142,6 +154,7 @@ class ServoController:
         await self.mouth_servo.move_servo(self.mouth_servo.current_angle)
         await self.left_right_servo.move_servo(self.left_right_servo.current_angle)
         await self.up_down_servo.move_servo(self.up_down_servo.current_angle)
+        await self.eye_brightness.move_servo(self.eye_brightness.current_angle)
 
     def map_value(self, value, input_min, input_max, output_min, output_max):
         return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
@@ -181,7 +194,8 @@ class ServoController:
         await asyncio.gather(
             self.process_mqtt_messages(),
             self.tail_servo.move_naturally(),      
-            self.mouth_servo.move_naturally(),            
+            self.mouth_servo.move_naturally(),     
+            self.eye_brightness.move_naturally(),               
         )
 
     async def shutdown(self):
