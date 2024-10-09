@@ -65,15 +65,8 @@ class MQTTClient:
         self.client.disconnect()  # Desconecta el cliente del broker
         print("Cliente MQTT desconectado")
 
-    def on_message(self, client, userdata, msg):
-        try:
-            msg = msg.payload.decode()
-            self.mqtt_queue.put(msg)
-            #print(msg)
-        #     payload = json.loads(msg.payload.decode())
-        #     centroid_x = payload.get("centroid_x")
-        #     centroid_y = payload.get("centroid_y")
-        #     print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")
-
+    def on_message(self, client, userdata, msg) -> bytes:
+        try:           
+            self.mqtt_queue.put(msg.payload)
         except Exception as e:
             print(f"Error procesando el mensaje: {e}")

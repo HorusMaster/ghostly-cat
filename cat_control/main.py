@@ -7,8 +7,8 @@ import random
 import queue
 import signal
 
-IMAGE_WIDTH = 1280
-IMAGE_HEIGHT = 720
+IMAGE_WIDTH = 1920
+IMAGE_HEIGHT = 1080
 
 class AbstractServo(ABC):
     current_angle: int 
@@ -159,10 +159,10 @@ class ServoController:
     def map_value(self, value, input_min, input_max, output_min, output_max):
         return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
 
-    async def control_servos(self, centroid_x, centroid_y):
+    async def control_servos(self, telemetry: CatTelemetry):
         """ Mapea las coordenadas del centroide a los ángulos de los servos y los mueve suavemente. """
-        servo_left_right_mapped_angle = self.map_value(centroid_x, 0, IMAGE_WIDTH, self.left_right_servo.max_angle, self.left_right_servo.min_angle)
-        servo_up_down_mapped_angle = self.map_value(centroid_y, 0, IMAGE_HEIGHT, self.up_down_servo.max_angle, self.up_down_servo.min_angle)
+        servo_left_right_mapped_angle = self.map_value(telemetry.centroid_x, 0, IMAGE_WIDTH, self.left_right_servo.max_angle, self.left_right_servo.min_angle)
+        servo_up_down_mapped_angle = self.map_value(telemetry.centroid_y, 0, IMAGE_HEIGHT, self.up_down_servo.max_angle, self.up_down_servo.min_angle)
 
         # Mover los servos suavemente a los ángulos calculados
         await self.left_right_servo.move_servo_with_steps(servo_left_right_mapped_angle, 20)
@@ -171,15 +171,10 @@ class ServoController:
     async def process_mqtt_messages(self):
         while True:
             try:
-                # Espera a que llegue un mensaje en la cola
-                data_str = self.mqtt_client.mqtt_queue.get_nowait()          
-                json_str = data_str.replace("'", '"')   # Remplazar por binary
-                payload = json.loads(json_str)           
-                centroid_x = payload.get("centroid_x")
-                centroid_y = payload.get("centroid_y")            
-                print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")
-              
-                await self.control_servos(centroid_x, centroid_y)
+                data_binary = self.mqtt_client.mqtt_queue.get_nowait()
+                telemetry = CatTelemetry.from_bytes(data_binary)
+                #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")              
+                await self.control_servos(telemetry)
                
             except queue.Empty:
                 await asyncio.sleep(0.1)
