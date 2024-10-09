@@ -11,11 +11,25 @@ MQTT_TOPIC = "cat/telemetry"
 
 @dataclass(frozen=True)
 class CatTelemetry:
-    centroid_x: float
-    centroid_y: float
+    centroid_x: int
+    centroid_y: int
 
     def to_dict(self):
-        return {"centroid_x": self.centroid_x, "centroid_y": self.centroid_y}
+        """Convierte los datos en un diccionario, asegurando que sean de tipo int."""
+        return {
+            "centroid_x": int(self.centroid_x),  # Asegurarse de que sea un int
+            "centroid_y": int(self.centroid_y)
+        }
+
+    def to_bytes(self):
+        """Convierte el diccionario a JSON y luego a bytes con codificación UTF-8."""
+        return bytes(json.dumps(self.to_dict()), "utf-8")
+
+    @staticmethod
+    def from_bytes(binary_data):
+        """Convierte los datos en bytes (JSON) a una instancia de CatTelemetry."""
+        data = json.loads(binary_data.decode("utf-8"))
+        return CatTelemetry(centroid_x=data["centroid_x"], centroid_y=data["centroid_y"])
 
 
 class MQTTClient:

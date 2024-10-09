@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 import os
+from cat_common.mqtt_messages import CatTelemetry, MQTTClient
+import json
 
+mqtt_client = MQTTClient()
+mqtt_client.client_start()
 # Ruta al archivo de modelo Caffe
 MODEL_PATH = "models/res10_300x300_ssd_iter_140000.caffemodel"
 PROTOTXT_PATH = "models/deploy.prototxt.txt"
@@ -35,6 +39,12 @@ frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 # Configurar el VideoWriter para guardar el video
 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec para AVI, también puedes usar 'MP4V'
 out = cv2.VideoWriter(VIDEO_OUTPUT_PATH, fourcc, 10.0, (frame_width, frame_height))
+
+
+def publish_centroid(telemetry: CatTelemetry):
+    """Publica los centroides en formato JSON a través de MQTT."""   
+    mqtt_client.publish(telemetry.to_bytes())
+    print(f"Published Centroids {telemetry.to_dict()}")
 
 while True:
     ret, frame = cap.read()
@@ -71,8 +81,13 @@ while True:
             y = startY - 10 if startY - 10 > 10 else startY + 10
             cv2.putText(frame, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
 
+            centroid_x = (startX + endX) // 2
+            centroid_y = (startY + endY) // 2
+
+            publish_centroid(CatTelemetry(centroid_x, centroid_y))
+
     # Escribir el frame en el archivo de video
-    out.write(frame)
+    #out.write(frame)
 
     # Salir si se presiona la tecla 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
