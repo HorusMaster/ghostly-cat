@@ -9,6 +9,7 @@ import signal
 
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
+MIN_PIXELS_TO_PROCESS = 100
 
 class AbstractServo(ABC):
     current_angle: int 
@@ -174,7 +175,7 @@ class ServoController:
         if self.last_centroid:
             delta_x = abs(telemetry.centroid_x - self.last_centroid.centroid_x)
             delta_y = abs(telemetry.centroid_y - self.last_centroid.centroid_y)
-            if delta_x < 50 and delta_y < 50:  # Umbral de diferencia mínima
+            if delta_x < MIN_PIXELS_TO_PROCESS and delta_y < MIN_PIXELS_TO_PROCESS:  # Umbral de diferencia mínima
                 return False
 
         self.last_telemetry_time = current_time
@@ -187,8 +188,8 @@ class ServoController:
         servo_up_down_mapped_angle = self.map_value(telemetry.centroid_y, 0, IMAGE_HEIGHT, self.up_down_servo.max_angle, self.up_down_servo.min_angle)
 
         # Mover los servos suavemente a los ángulos calculados
-        await self.left_right_servo.move_servo_with_steps(servo_left_right_mapped_angle, 20)
-        await self.up_down_servo.move_servo_with_steps(servo_up_down_mapped_angle, 20)
+        await self.left_right_servo.move_servo_with_steps(servo_left_right_mapped_angle, 50)
+        await self.up_down_servo.move_servo_with_steps(servo_up_down_mapped_angle, 50)
 
     async def process_mqtt_messages(self):
         while True:
