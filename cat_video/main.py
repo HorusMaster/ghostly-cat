@@ -21,7 +21,7 @@ net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
 gst_pipeline = (
     "nvarguscamerasrc sensor-id=0 ! "
     "video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1 ! "
-    "nvvidconv ! video/x-raw, format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink"
+    "nvvidconv ! video/x-raw, format=BGRx ! videoconvert ! appsink max-buffers=1 drop=true"
 )
 
 # Iniciar la captura de video desde la cámara usando el pipeline de GStreamer
