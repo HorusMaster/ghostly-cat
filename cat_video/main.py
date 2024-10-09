@@ -44,7 +44,7 @@ out = cv2.VideoWriter(VIDEO_OUTPUT_PATH, fourcc, 10.0, (frame_width, frame_heigh
 def publish_centroid(telemetry: CatTelemetry):
     """Publica los centroides en formato JSON a través de MQTT."""   
     mqtt_client.publish(telemetry.to_bytes())
-    print(f"Published Centroids {telemetry.to_dict()}")
+    #print(f"Published Centroids {telemetry.to_dict()}")
 
 while True:
     ret, frame = cap.read()

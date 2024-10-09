@@ -1,5 +1,5 @@
 import asyncio
-import json
+import time
 from adafruit_servokit import ServoKit
 from cat_common.mqtt_messages import CatTelemetry, MQTTClient
 from abc import ABC
@@ -28,7 +28,7 @@ class AbstractServo(ABC):
         target_angle = max(self.min_angle, min(self.max_angle, target_angle))
         self.kit.servo[self.servo_channel].angle = target_angle
         self.current_angle = target_angle
-        print(f"Servo {self.__class__.__name__} movido directamente a {target_angle}°")
+        #print(f"Servo {self.__class__.__name__} movido directamente a {target_angle}°")
         await asyncio.sleep(1)
 
     async def move_servo_with_steps(self, target_angle, steps=20):
@@ -43,7 +43,7 @@ class AbstractServo(ABC):
             self.kit.servo[self.servo_channel].angle = self.current_angle
             await asyncio.sleep(step_delay)
 
-        print(f"Servo {self.__class__.__name__} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
+        #print(f"Servo {self.__class__.__name__} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
         self.current_angle = target_angle
 
     async def move_naturally(self):
@@ -146,6 +146,9 @@ class ServoController:
         self.eye_brightness = EyeBrightnessControl(self.kit)
         self.mqtt_client = MQTTClient()
         self.mqtt_client.run()
+        self.last_telemetry_time = 0
+        self.min_time_between_updates = 0.4  # Tiempo mínimo entre movimientos (200ms)
+        self.last_centroid = None  # Último centroide procesado
 
 
     async def default_position(self):
@@ -158,6 +161,25 @@ class ServoController:
 
     def map_value(self, value, input_min, input_max, output_min, output_max):
         return (value - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
+    
+    def should_process_telemetry(self, telemetry):
+        """ Decide si procesar el mensaje basado en la diferencia con el último y el tiempo. """
+        current_time = time.time()
+
+        # Descartar si la diferencia de tiempo es muy pequeña
+        if current_time - self.last_telemetry_time < self.min_time_between_updates:
+            return False
+
+        # Descartar si la diferencia en el centroide es muy pequeña
+        if self.last_centroid:
+            delta_x = abs(telemetry.centroid_x - self.last_centroid.centroid_x)
+            delta_y = abs(telemetry.centroid_y - self.last_centroid.centroid_y)
+            if delta_x < 50 and delta_y < 50:  # Umbral de diferencia mínima
+                return False
+
+        self.last_telemetry_time = current_time
+        self.last_centroid = telemetry
+        return True
 
     async def control_servos(self, telemetry: CatTelemetry):
         """ Mapea las coordenadas del centroide a los ángulos de los servos y los mueve suavemente. """
@@ -173,8 +195,9 @@ class ServoController:
             try:
                 data_binary = self.mqtt_client.mqtt_queue.get_nowait()
                 telemetry = CatTelemetry.from_bytes(data_binary)
-                #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")              
-                await self.control_servos(telemetry)
+                #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
+                if self.should_process_telemetry(telemetry):         
+                    await self.control_servos(telemetry)
                
             except queue.Empty:
                 await asyncio.sleep(0.1)
