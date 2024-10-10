@@ -44,4 +44,4 @@ RUN pip3 install /code/cat_common
 COPY cat_control /code/cat_control/
 WORKDIR /code/cat_control
 
-#CMD ["python3", "main.py"]
+CMD ["python3", "main.py"]

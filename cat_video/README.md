@@ -19,7 +19,7 @@ docker run -it  --rm \
                 --ipc=host \
                 --device /dev/video0 \
                 --volume /tmp/argus_socket:/tmp/argus_socket \
-                --volume /var/ghostlycat/videos:/var/ghostlycat/videos \
+                --volume /var/ghostlycat:/var/ghostlycat \
                 cat_video
 ```
 

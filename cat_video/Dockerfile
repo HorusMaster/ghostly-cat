@@ -33,6 +33,7 @@ WORKDIR /code/cat_video
 
 EXPOSE 1883
 
+
 CMD ["python3", "main.py"]
 
 
