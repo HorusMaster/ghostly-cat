@@ -77,7 +77,7 @@ class AbstractServo(ABC):
                     await asyncio.sleep(random.uniform(0.2, 0.5))
 
 class TailServo(AbstractServo):
-    ADDRESS = 2  # Dirección del servo para la cola
+    ADDRESS = 0  # Dirección del servo para la cola
     current_angle = 120
     min_angle = 0
     max_angle = 120
@@ -89,7 +89,7 @@ class TailServo(AbstractServo):
 
 
 class MouthServo(AbstractServo):
-    ADDRESS = 8  # Dirección del servo para la boca
+    ADDRESS = 12  # Dirección del servo para la boca
     current_angle = 40
     min_angle = 0
     max_angle = 40
@@ -101,7 +101,7 @@ class MouthServo(AbstractServo):
 
 
 class LeftRightServo(AbstractServo):
-    ADDRESS = 0  # Dirección del servo para el movimiento izquierda/derecha
+    ADDRESS = 10  # Dirección del servo para el movimiento izquierda/derecha
     current_angle = 50
     min_angle = 0
     max_angle = 140
@@ -113,10 +113,10 @@ class LeftRightServo(AbstractServo):
 
 
 class UpDownServo(AbstractServo):
-    ADDRESS = 12  # Dirección del servo para el movimiento arriba/abajo
+    ADDRESS = 6  # Dirección del servo para el movimiento arriba/abajo
     current_angle = 120
-    min_angle = 100
-    max_angle = 150
+    min_angle = 60
+    max_angle = 130
     pulse_min = 1000
     pulse_max = 2500
 
@@ -124,7 +124,7 @@ class UpDownServo(AbstractServo):
         super().__init__(UpDownServo.ADDRESS, kit)
 
 class EyeBrightnessControl(AbstractServo):
-    ADDRESS = 4  # Canal para el brillo de los ojos
+    ADDRESS = 15
     current_angle = 120
     min_angle = 0
     max_angle = 180

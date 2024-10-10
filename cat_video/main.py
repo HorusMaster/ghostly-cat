@@ -1,99 +1,118 @@
 import cv2
 import numpy as np
-import os
+import time
+from pathlib import Path
 from cat_common.mqtt_messages import CatTelemetry, MQTTClient
-import json
-
-mqtt_client = MQTTClient()
-mqtt_client.client_start()
-# Ruta al archivo de modelo Caffe
-MODEL_PATH = "models/res10_300x300_ssd_iter_140000.caffemodel"
-PROTOTXT_PATH = "models/deploy.prototxt.txt"
-VIDEO_OUTPUT_PATH = "/var/ghostlycat/videos/output.avi"  # Ruta de salida para el video
-
-# Asegúrate de que la carpeta de salida exista
-os.makedirs(os.path.dirname(VIDEO_OUTPUT_PATH), exist_ok=True)
-
-# Cargar el modelo preentrenado
-net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
-
-# Pipeline GStreamer para usar nvarguscamerasrc en Jetson Nano con aceleración de hardware
-gst_pipeline = (
-    "nvarguscamerasrc sensor-id=0 ! "
-    "video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1 ! "
-    "nvvidconv ! video/x-raw, format=BGRx ! videoconvert ! appsink max-buffers=1 drop=true"
-)
-
-# Iniciar la captura de video desde la cámara usando el pipeline de GStreamer
-cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
-
-# Verificar que la cámara se haya abierto correctamente
-if not cap.isOpened():
-    print("Error: No se pudo abrir la cámara.")
-    exit()
-
-# Obtener las dimensiones del video
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-# Configurar el VideoWriter para guardar el video
-fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec para AVI, también puedes usar 'MP4V'
-out = cv2.VideoWriter(VIDEO_OUTPUT_PATH, fourcc, 10.0, (frame_width, frame_height))
 
 
-def publish_centroid(telemetry: CatTelemetry):
-    """Publica los centroides en formato JSON a través de MQTT."""   
-    mqtt_client.publish(telemetry.to_bytes())
-    #print(f"Published Centroids {telemetry.to_dict()}")
+class CatFaceDetector:
+    def __init__(self, model_path: Path, prototxt_path:Path, mqtt_client: MQTTClient, video_output_path: Path=None, draw_boxes:bool=False, fps_limit:int=10):
+        self.model_path = str(model_path)
+        self.prototxt_path = str(prototxt_path)
+        self.mqtt_client = mqtt_client
+        self.draw_boxes = draw_boxes
+        self.fps_limit = 1 / fps_limit
+        self.last_processed_time = time.monotonic()
 
-while True:
-    ret, frame = cap.read()
+        self.net = cv2.dnn.readNetFromCaffe(self.prototxt_path, self.model_path)
 
-    if not ret:
-        print("Error: No se pudo capturar el frame.")
-        break
+        self.gst_pipeline = (
+            "nvarguscamerasrc sensor-id=0 ! "
+            "video/x-raw(memory:NVMM), width=1920, height=1080, format=NV12, framerate=30/1 ! "
+            "nvvidconv ! video/x-raw, format=BGRx ! videoconvert ! appsink max-buffers=1 drop=true"
+        )
 
-    # Obtener las dimensiones del frame
-    frame_height, frame_width = frame.shape[:2]
+        self.cap = cv2.VideoCapture(self.gst_pipeline, cv2.CAP_GSTREAMER)
 
-    # Preparar la imagen para la detección de rostros
-    blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), (104.0, 177.0, 123.0), swapRB=False, crop=False)
+        if not self.cap.isOpened():
+            print("Error: No se pudo abrir la cámara.")
+            exit()
 
-    # Realizar la detección de rostros
-    net.setInput(blob)
-    detections = net.forward()
+        self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # Recorrer las detecciones
-    for i in range(0, detections.shape[2]):
-        confidence = detections[0, 0, i, 2]  # Confianza de la detección (probabilidad)
+        if video_output_path:
+            video_output_path.parent.mkdir(parents=True, exist_ok=True)
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            self.out = cv2.VideoWriter(str(video_output_path), fourcc, 10.0, (self.frame_width, self.frame_height))
+        else:
+            self.out = None
 
-        # Solo dibujar si la confianza es mayor a un umbral (por ejemplo, 0.5)
-        if confidence > 0.5:
-            # Obtener las coordenadas del bounding box
-            box = detections[0, 0, i, 3:7] * np.array([frame_width, frame_height, frame_width, frame_height])
-            (startX, startY, endX, endY) = box.astype("int")
+    def publish_centroid(self, telemetry: CatTelemetry):
+        self.mqtt_client.publish(telemetry.to_bytes())
 
-            # Dibujar el bounding box alrededor del rostro
-            cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
+    def process_frame(self):
+        ret, frame = self.cap.read()
 
-            # Mostrar el nivel de confianza encima del bounding box
-            text = f"{confidence * 100:.2f}%"
-            y = startY - 10 if startY - 10 > 10 else startY + 10
-            cv2.putText(frame, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+        if not ret:
+            print("Error: No se pudo capturar el frame.")
+            return False
 
-            centroid_x = (startX + endX) // 2
-            centroid_y = (startY + endY) // 2
+        current_time = time.monotonic()
 
-            publish_centroid(CatTelemetry(centroid_x, centroid_y))
+        if (current_time - self.last_processed_time) < self.fps_limit:
+            return True
 
-    # Escribir el frame en el archivo de video
-    #out.write(frame)
+        self.last_processed_time = current_time
 
-    # Salir si se presiona la tecla 'q'
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), (104.0, 177.0, 123.0), swapRB=False, crop=False)
 
-# Liberar la cámara, cerrar el VideoWriter y destruir ventanas
-cap.release()
-out.release()
-cv2.destroyAllWindows()
+        self.net.setInput(blob)
+        detections = self.net.forward()
+
+        for i in range(0, detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+
+            if confidence > 0.5:
+                box = detections[0, 0, i, 3:7] * np.array([self.frame_width, self.frame_height, self.frame_width, self.frame_height])
+                (startX, startY, endX, endY) = box.astype("int")
+
+                if self.draw_boxes:
+                    cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
+                    text = f"{confidence * 100:.2f}%"
+                    y = startY - 10 if startY - 10 > 10 else startY + 10
+                    cv2.putText(frame, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 2)
+
+                centroid_x = (startX + endX) // 2
+                centroid_y = (startY + endY) // 2
+
+                self.publish_centroid(CatTelemetry(centroid_x, centroid_y))
+
+        if self.out:
+            self.out.write(frame)
+
+        return True
+
+    def release_resources(self):
+        self.cap.release()
+        if self.out:
+            self.out.release()
+        cv2.destroyAllWindows()
+
+    def run(self):
+        while True:
+            if not self.process_frame():
+                break
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        self.release_resources()
+
+
+if __name__ == "__main__":
+    MODEL_PATH = Path("models/res10_300x300_ssd_iter_140000.caffemodel")
+    PROTOTXT_PATH = Path("models/deploy.prototxt.txt")
+    VIDEO_OUTPUT_PATH = Path("/var/ghostlycat/videos/output.avi")
+
+    mqtt_client = MQTTClient()
+    mqtt_client.client_start()
+
+    detector = CatFaceDetector(
+        model_path=MODEL_PATH,
+        prototxt_path=PROTOTXT_PATH,
+        mqtt_client=mqtt_client,
+        fps_limit=10
+       
+    )
+    detector.run()

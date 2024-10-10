@@ -33,6 +33,8 @@ class CatTelemetry:
 
 
 class MQTTClient:
+    QOS = 0
+
     def __init__(self):
         self.client = mqtt.Client()
         self.mqtt_queue = queue.Queue()
@@ -49,7 +51,7 @@ class MQTTClient:
         thread.start()
 
     def publish(self, payload):
-        self.client.publish(MQTT_TOPIC, payload)
+        self.client.publish(MQTT_TOPIC, payload, qos=self.QOS)
 
     def on_connect(self, client, userdata, flags, rc):       
         message = f"Conectado a MQTT Broker con código {str(rc)}"
