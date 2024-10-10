@@ -47,31 +47,33 @@ class AbstractServo(ABC):
         #print(f"Servo {self.__class__.__name__} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
         self.current_angle = target_angle
 
-    async def move_naturally(self):
-        """ Mueve el servo de forma natural como la cola de un gato, con oscilaciones controladas. """
+    async def move_naturally(self, stop_flag = None):
         while True:
-            # Definir patrones de oscilación, con movimientos hacia los extremos y variaciones menores
+            if stop_flag is not None and stop_flag.is_set():
+                await asyncio.sleep(0.1)
+                continue            
             pattern_type = random.choice(["oscillation", "hold", "small_variation"])
 
             if pattern_type == "oscillation":
-                # Oscilar entre los extremos (mínimo y máximo)
-                for _ in range(random.randint(2, 5)):  # Moverse varias veces entre mínimo y máximo
+                for _ in range(random.randint(2, 5)):
+                    if stop_flag is not None and stop_flag.is_set():
+                        break
                     await self.move_servo_with_steps(self.max_angle, steps=random.randint(10, 30))
                     await asyncio.sleep(random.uniform(0.5, 1.5))
                     await self.move_servo_with_steps(self.min_angle, steps=random.randint(10, 30))
                     await asyncio.sleep(random.uniform(0.5, 1.5))
 
             elif pattern_type == "hold":
-                # Mantenerse en una posición por un tiempo
-                target_angle = random.choice([self.min_angle, self.max_angle])  # Mantenerse en un extremo
+                target_angle = random.choice([self.min_angle, self.max_angle])
                 await self.move_servo(target_angle)
-                await asyncio.sleep(random.uniform(2, 5))  # Mantenerse quieto por más tiempo
+                await asyncio.sleep(random.uniform(2, 5))
 
             elif pattern_type == "small_variation":
-                # Pequeñas variaciones cercanas al ángulo actual (como pequeños temblores)
                 for _ in range(random.randint(3, 6)):
+                    if stop_flag is not None and stop_flag.is_set():
+                        break
                     current_angle = self.current_angle
-                    small_variation = random.randint(-10, 10)  # Variaciones pequeñas
+                    small_variation = random.randint(-10, 10)
                     target_angle = max(self.min_angle, min(self.max_angle, current_angle + small_variation))
                     await self.move_servo_with_steps(target_angle, steps=random.randint(5, 15))
                     await asyncio.sleep(random.uniform(0.2, 0.5))
@@ -150,6 +152,9 @@ class ServoController:
         self.last_telemetry_time = 0
         self.min_time_between_updates = 0.4  # Tiempo mínimo entre movimientos (200ms)
         self.last_centroid = None  # Último centroide procesado
+        self.stop_natural_movement = asyncio.Event()
+        self.last_message_time = time.time()
+        self.time_without_messages = 5 
 
 
     async def default_position(self):
@@ -197,11 +202,14 @@ class ServoController:
                 data_binary = self.mqtt_client.mqtt_queue.get_nowait()
                 telemetry = CatTelemetry.from_bytes(data_binary)
                 #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
-                if self.should_process_telemetry(telemetry):         
-                    await self.control_servos(telemetry)
-               
+                #if self.should_process_telemetry(telemetry):      
+                self.stop_natural_movement.set()   
+                await self.control_servos(telemetry)    
+                self.last_message_time = time.time()                    
             except queue.Empty:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.01)
+                if time.time() - self.last_message_time > self.time_without_messages:
+                    self.stop_natural_movement.clear()
             except Exception as exc:
                 print(exc)
 
@@ -214,7 +222,9 @@ class ServoController:
             self.process_mqtt_messages(),
             self.tail_servo.move_naturally(),      
             self.mouth_servo.move_naturally(),     
-            self.eye_brightness.move_naturally(),               
+            self.eye_brightness.move_naturally(),  
+            self.left_right_servo.move_naturally(self.stop_natural_movement)
+                       
         )
 
     async def shutdown(self):
