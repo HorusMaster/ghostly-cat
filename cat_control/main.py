@@ -6,6 +6,7 @@ from abc import ABC
 import random
 import queue
 import signal
+from modules.speech import SpeechSynthesizer
 
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
@@ -242,6 +243,11 @@ def shutdown_handler(loop, servo_controller):
 if __name__ == '__main__':
     servo_controller = ServoController()
     loop = asyncio.get_event_loop()
+    #speech_synthesizer = SpeechSynthesizer()
+    #text = "Hola Juan, ¿cómo estás hoy?"
+
+    # Reproducir el texto como audio
+    #speech_synthesizer.speak(text)
 
     # Handle signals for graceful shutdown
     for signame in ('SIGINT', 'SIGTERM'):

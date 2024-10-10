@@ -23,6 +23,7 @@ RUN apt-get install -y --no-install-recommends \
     build-essential python3-dev gcc \
     git  `# For developer container` \
     make `# For Makefile usage` \
+    alsa-utils ffmpeg espeak-ng sox \
     && apt-get clean
 
 
@@ -35,10 +36,12 @@ RUN pip3 install -r /code/cat_control/requirements.txt
 
 #COPY ./.flake8 ./pyproject.toml /code/
 
+#RUN apt-get install -y espeak alsa-utils pulseaudio-utils
+
 COPY cat_common /code/cat_common
 RUN pip3 install /code/cat_common
 
 COPY cat_control /code/cat_control/
 WORKDIR /code/cat_control
 
-CMD ["python3", "main.py"]
+#CMD ["python3", "main.py"]
