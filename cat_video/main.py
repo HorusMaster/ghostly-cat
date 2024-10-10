@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import time
 from pathlib import Path
-from cat_common.mqtt_messages import CatTelemetry, MQTTClient
+from cat_common.mqtt_messages import CatTelemetry, MQTTClient, MQTT_TOPIC, MQTT_FACE_TOPIC
 from modules.face_manager import FaceTrainer
 
 
@@ -42,7 +42,12 @@ class CatFaceDetector:
             self.out = None
 
     def publish_centroid(self, telemetry: CatTelemetry):
-        self.mqtt_client.publish(telemetry.to_bytes())
+        self.mqtt_client.publish(MQTT_TOPIC, telemetry.to_bytes())
+
+    def publish_recognized_name(self, name: str):
+        """Publicar el nombre de la persona reconocida"""       
+        self.mqtt_client.publish(MQTT_FACE_TOPIC, name.encode())
+
 
     def process_frame(self):
         ret, frame = self.cap.read()
@@ -84,10 +89,9 @@ class CatFaceDetector:
                 face_encoding = detections[0, 0, i, 3:7]
 
                 # Comparar con encodings entrenados                
-                name = self.face_trainer.compare_encodings(face_encoding)
-                print(name)
+                name = self.face_trainer.compare_encodings(face_encoding)                
                 # Publicar el nombre reconocido
-                #self.publish_recognized_name(name)
+                self.publish_recognized_name(name)
 
         if self.out:
             self.out.write(frame)

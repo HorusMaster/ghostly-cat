@@ -7,6 +7,7 @@ import queue
 MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC = "cat/telemetry"
+MQTT_FACE_TOPIC = "cat/recognized"
 
 
 @dataclass(frozen=True)
@@ -50,8 +51,8 @@ class MQTTClient:
         thread.daemon = True
         thread.start()
 
-    def publish(self, payload):
-        self.client.publish(MQTT_TOPIC, payload, qos=self.QOS)
+    def publish(self, topic, payload):
+        self.client.publish(topic, payload, qos=self.QOS)
 
     def on_connect(self, client, userdata, flags, rc):       
         message = f"Conectado a MQTT Broker con código {str(rc)}"
@@ -61,14 +62,18 @@ class MQTTClient:
             # En caso de error con la codificación ASCII, se reemplazan los caracteres especiales.
             print(message.encode('ascii', 'replace').decode('ascii'))
         client.subscribe(MQTT_TOPIC)
+        client.subscribe(MQTT_FACE_TOPIC)
 
     def disconnect(self):       
         self.client.loop_stop()  # Detiene el loop_start
         self.client.disconnect()  # Desconecta el cliente del broker
         print("Cliente MQTT desconectado")
 
-    def on_message(self, client, userdata, msg) -> bytes:
-        try:           
-            self.mqtt_queue.put(msg.payload)
+    
+    def on_message(self, client, userdata, msg):
+        """Manda a la cola tanto el topic como el payload recibido"""
+        try:
+            # Colocar en la cola una tupla con el topic y el payload
+            self.mqtt_queue.put((msg.topic, msg.payload))
         except Exception as e:
             print(f"Error procesando el mensaje: {e}")

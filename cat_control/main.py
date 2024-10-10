@@ -1,7 +1,7 @@
 import asyncio
 import time
 from adafruit_servokit import ServoKit
-from cat_common.mqtt_messages import CatTelemetry, MQTTClient
+from cat_common.mqtt_messages import CatTelemetry, MQTTClient, MQTT_TOPIC, MQTT_FACE_TOPIC
 from abc import ABC
 import random
 import queue
@@ -200,13 +200,20 @@ class ServoController:
     async def process_mqtt_messages(self):
         while True:
             try:
-                data_binary = self.mqtt_client.mqtt_queue.get_nowait()
-                telemetry = CatTelemetry.from_bytes(data_binary)
+                topic, payload = self.mqtt_client.mqtt_queue.get_nowait()
+                if topic == MQTT_TOPIC:
+                    telemetry = CatTelemetry.from_bytes(payload)
+                    self.stop_natural_movement.set()   
+                    await self.control_servos(telemetry)   
+                    self.last_message_time = time.time()
+                elif topic == MQTT_FACE_TOPIC:
+                    face_detected = payload.decode("utf-8")
+                    print(face_detected)
                 #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
                 #if self.should_process_telemetry(telemetry):      
-                self.stop_natural_movement.set()   
-                await self.control_servos(telemetry)    
-                self.last_message_time = time.time()                    
+               
+                
+                                
             except queue.Empty:
                 await asyncio.sleep(0.01)
                 if time.time() - self.last_message_time > self.time_without_messages:
