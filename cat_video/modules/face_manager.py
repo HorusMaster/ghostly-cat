@@ -75,7 +75,7 @@ class FaceTrainer:
         """Generar encodings a partir de imágenes en una carpeta con augmentation y epochs"""
         for epoch in range(epochs):
             print(f"Epoch {epoch+1}/{epochs}")
-            for image_file in images_folder.glob("*.jpg"):  # Ajustar para tus tipos de archivo
+            for image_file in images_folder.glob("*.png"):  # Ajustar para tus tipos de archivo
                 # Extraer solo el nombre de la persona (antes del número)
                 name = ''.join([i for i in image_file.stem if not i.isdigit()])  # Esto extrae "Jose" o "Yare"
                 print(f"Procesando {image_file} como {name}")
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     trainer = FaceTrainer(ENCODINGS_PATH, PROTOTXT_PATH, MODEL_PATH)
 
     # Entrenar los rostros (cargar imágenes de la carpeta)
-    trainer.train(IMAGES_FOLDER, epochs=3)  # Aquí puedes especificar las epochs
+    trainer.train(IMAGES_FOLDER, epochs=1)  # Aquí puedes especificar las epochs
 
     # Procesar video en tiempo real usando GStreamer
     trainer.process_video()

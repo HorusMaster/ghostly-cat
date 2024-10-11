@@ -176,8 +176,8 @@ class ServoController:
         self.last_audio_played = None  
 
         self.audio_files = {
-            "Yare": YARE_AUDIO,
-            "Jose": PEPE_AUDIO,
+            "yare": YARE_AUDIO,
+            "jose": PEPE_AUDIO,
             "tita": TITA_AUDIO,
             "vale": VALE_AUDIO,
             "hola": HOLA_AUDIO
@@ -283,7 +283,7 @@ class ServoController:
 
     async def main(self):
         await self.default_position()
-
+        await self.play_face_audio("hola")
         # Ejecutar los movimientos naturales de cada servo
         await asyncio.gather(
             self.process_mqtt_messages(),
