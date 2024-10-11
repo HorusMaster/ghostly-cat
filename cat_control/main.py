@@ -18,10 +18,15 @@ def convert_audio(target_path: Path, current_audio: Path):
     os.system(f"sox {current_audio} {output_stereo} channels 2 rate 48000 dither")
     
 
-def speak(audio_path: Path):
-    #output_stereo = audios/"output_stereo.wav"
-    #os.system(f"sox {audio_path} {output_stereo} channels 2 rate 48000 dither")
-    os.system(f'aplay -D hw:2,0 {audio_path}')
+async def speak_async(audio_path: Path):
+    """Reproduce el audio de forma asíncrona."""
+    process = await asyncio.create_subprocess_exec(
+        'aplay', '-D', 'hw:2,0', str(audio_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await process.communicate()
+
 
 class AbstractServo(ABC):
     current_angle: int 
@@ -167,19 +172,47 @@ class ServoController:
         self.stop_natural_movement = asyncio.Event()
         self.last_message_time = time.time()
         self.time_without_messages = 5 
+        self.audio_queue = asyncio.Queue()
+        self.last_audio_played = None  
 
         self.audio_files = {
             "Yare": YARE_AUDIO,
             "Jose": PEPE_AUDIO,
             "tita": TITA_AUDIO,
-            "vale": VALE_AUDIO
+            "vale": VALE_AUDIO,
+            "hola": HOLA_AUDIO
         }
+ 
 
     async def play_face_audio(self, face_detected):
-        """Reproduce el audio correspondiente al nombre del rostro detectado."""
+        """Limpia la cola de audios anteriores y coloca el audio del último rostro detectado si no es el mismo."""
         if face_detected in self.audio_files:
             audio_path = self.audio_files[face_detected]
-            speak(audio_path)
+
+            # Verifica si es el mismo audio que ya está en la cola
+            if audio_path != self.last_audio_played:
+                # Vacía la cola antes de agregar el nuevo audio
+                while not self.audio_queue.empty():
+                    try:
+                        self.audio_queue.get_nowait()
+                        self.audio_queue.task_done()
+                    except queue.Empty:
+                        break
+
+                # Agregar el nuevo audio a la cola
+                await self.audio_queue.put(audio_path)
+                self.last_audio_played = audio_path  # Actualiza el último audio reproducido
+
+    async def audio_player(self):
+        """Reproduce audios de la cola de manera secuencial."""
+        while True:
+            try:
+                # Utiliza get() para esperar por el siguiente audio
+                audio_path = await self.audio_queue.get()
+                await speak_async(audio_path)
+                self.audio_queue.task_done()
+            except Exception as exc:
+                print(exc)
 
 
     async def default_position(self):
@@ -248,9 +281,6 @@ class ServoController:
                 print(exc)
 
 
-    async def play_audio(self):
-        speak(HOLA_AUDIO)
-
     async def main(self):
         await self.default_position()
 
@@ -261,7 +291,7 @@ class ServoController:
             self.mouth_servo.move_naturally(),     
             self.eye_brightness.move_naturally(),  
             self.left_right_servo.move_naturally(self.stop_natural_movement),
-            self.play_audio()                       
+            self.audio_player()                 
         )
 
     async def shutdown(self):
