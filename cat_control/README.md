@@ -27,6 +27,20 @@ docker run -it --rm \
     -e PULSE_SERVER=unix:/run/user/1003/pulse/native \
     -v /etc/machine-id:/etc/machine-id \
     cat_control
+
+
+docker run -it \
+    --privileged \
+    --network host \
+    -e BLINKA_FORCEBOARD=JETSON_NANO \
+    --device /dev/i2c-1 \
+    --device /dev/snd \
+    --volume /var/ghostlycat:/var/ghostlycat \
+    -v /run/user/1003/pulse:/run/user/1003/pulse \
+    -v /usr/share/sounds/alsa:/usr/share/sounds/alsa \
+    -e PULSE_SERVER=unix:/run/user/1003/pulse/native \
+    -v /etc/machine-id:/etc/machine-id \
+    cat_control
 ```
 
 # Detect devices

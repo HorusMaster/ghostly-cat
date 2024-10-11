@@ -6,11 +6,22 @@ from abc import ABC
 import random
 import queue
 import signal
-from modules.speech import SpeechSynthesizer
-
+import os
+from pathlib import Path
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
 MIN_PIXELS_TO_PROCESS = 100
+
+
+def convert_audio(target_path: Path, current_audio: Path):
+    output_stereo = target_path/"output_stereo.wav"
+    os.system(f"sox {current_audio} {output_stereo} channels 2 rate 48000 dither")
+    
+
+def speak(audio_path: Path):
+    #output_stereo = audios/"output_stereo.wav"
+    #os.system(f"sox {audio_path} {output_stereo} channels 2 rate 48000 dither")
+    os.system(f'aplay -D hw:2,0 {audio_path}')
 
 class AbstractServo(ABC):
     current_angle: int 
@@ -157,6 +168,19 @@ class ServoController:
         self.last_message_time = time.time()
         self.time_without_messages = 5 
 
+        self.audio_files = {
+            "Yare": YARE_AUDIO,
+            "Jose": PEPE_AUDIO,
+            "tita": TITA_AUDIO,
+            "vale": VALE_AUDIO
+        }
+
+    async def play_face_audio(self, face_detected):
+        """Reproduce el audio correspondiente al nombre del rostro detectado."""
+        if face_detected in self.audio_files:
+            audio_path = self.audio_files[face_detected]
+            speak(audio_path)
+
 
     async def default_position(self):
         """ Coloca todos los servos en su posición predeterminada usando `move_servo`. """
@@ -209,6 +233,8 @@ class ServoController:
                 elif topic == MQTT_FACE_TOPIC:
                     face_detected = payload.decode("utf-8")
                     print(face_detected)
+                    #print(f"Rostro detectado: {face_detected}")
+                    await self.play_face_audio(face_detected)
                 #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
                 #if self.should_process_telemetry(telemetry):      
                
@@ -222,6 +248,9 @@ class ServoController:
                 print(exc)
 
 
+    async def play_audio(self):
+        speak(HOLA_AUDIO)
+
     async def main(self):
         await self.default_position()
 
@@ -231,8 +260,8 @@ class ServoController:
             self.tail_servo.move_naturally(),      
             self.mouth_servo.move_naturally(),     
             self.eye_brightness.move_naturally(),  
-            self.left_right_servo.move_naturally(self.stop_natural_movement)
-                       
+            self.left_right_servo.move_naturally(self.stop_natural_movement),
+            self.play_audio()                       
         )
 
     async def shutdown(self):
@@ -248,18 +277,21 @@ def shutdown_handler(loop, servo_controller):
     asyncio.create_task(servo_controller.shutdown())
 
 if __name__ == '__main__':
+    PEPE_AUDIO = Path("audios/pepe_stereo.wav")
+    YARE_AUDIO = Path("audios/yare_stereo.wav")
+    TITA_AUDIO = Path("audios/tita_stereo.wav")
+    VALE_AUDIO = Path("audios/vale_stereo.wav") 
+    HOLA_AUDIO = Path("audios/hola_stereo.wav")
+    
+    #AUDIOS = Path("/var/ghostlycat/audios")
+    #convert_audio(AUDIOS, HOLA_AUDIO)
+   
     servo_controller = ServoController()
     loop = asyncio.get_event_loop()
-    #speech_synthesizer = SpeechSynthesizer()
-    #text = "Hola Juan, ¿cómo estás hoy?"
-
-    # Reproducir el texto como audio
-    #speech_synthesizer.speak(text)
-
+  
     # Handle signals for graceful shutdown
     for signame in ('SIGINT', 'SIGTERM'):
-        loop.add_signal_handler(getattr(signal, signame), shutdown_handler, loop, servo_controller)
-
+        loop.add_signal_handler(getattr(signal, signame), shutdown_handler, loop, servo_controller)    
     try:
         loop.run_until_complete(servo_controller.main())
     except (KeyboardInterrupt, asyncio.CancelledError):
