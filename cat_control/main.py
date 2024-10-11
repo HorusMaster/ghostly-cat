@@ -41,6 +41,19 @@ class AbstractServo(ABC):
         # Configurar el rango de pulso
         self.kit.servo[self.servo_channel].set_pulse_width_range(self.pulse_min, self.pulse_max)
 
+    async def move_quickly(self):
+        """Mueve el servo rápidamente mientras el evento está activo (reproduciendo audio)."""
+        #while audio_playing_event.is_set():  # Cambiamos la condición para que se mueva mientras el evento está activo
+            # Mover rápidamente la boca simulando hablar
+        while True:
+            await self.just_move(self.max_angle)
+            await asyncio.sleep(0.2)
+            await self.just_move(self.min_angle)        
+            await asyncio.sleep(0.2)
+
+    async def just_move(self, angle):
+        self.kit.servo[self.servo_channel].angle = angle
+
     async def move_servo(self, target_angle):
         """ Mueve el servo directamente a un ángulo específico y espera 1 segundo. """
         target_angle = max(self.min_angle, min(self.max_angle, target_angle))
@@ -108,12 +121,12 @@ class TailServo(AbstractServo):
 
 
 class MouthServo(AbstractServo):
-    ADDRESS = 12  # Dirección del servo para la boca
-    current_angle = 40
-    min_angle = 0
-    max_angle = 40
-    pulse_min = 600
-    pulse_max = 2500
+    ADDRESS = 12
+    current_angle = 85
+    min_angle = 60
+    max_angle = 90
+    pulse_min = 400
+    pulse_max = 2400
 
     def __init__(self, kit):
         super().__init__(MouthServo.ADDRESS, kit)
@@ -157,6 +170,7 @@ class EyeBrightnessControl(AbstractServo):
 class ServoController:
     def __init__(self):
         self.kit = ServoKit(channels=16, address=0x40)
+        self.kit.frequency = 50
 
         # Instanciar servos con sus valores constantes definidos en cada subclase
         self.tail_servo = TailServo(self.kit)
@@ -177,7 +191,7 @@ class ServoController:
 
         self.audio_files = {
             "yare": YARE_AUDIO,
-            "jose": PEPE_AUDIO,
+            "pepe": PEPE_AUDIO,
             "tita": TITA_AUDIO,
             "vale": VALE_AUDIO,
             "hola": HOLA_AUDIO
