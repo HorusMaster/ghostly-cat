@@ -133,7 +133,7 @@ class LeftRightServo(AbstractServo):
 
 class UpDownServo(AbstractServo):
     ADDRESS = 6  # Dirección del servo para el movimiento arriba/abajo
-    current_angle = 120
+    current_angle = 90
     min_angle = 60
     max_angle = 130
     pulse_min = 1000
