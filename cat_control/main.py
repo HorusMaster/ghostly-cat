@@ -18,7 +18,7 @@ def convert_audio(target_path: Path, current_audio: Path):
     os.system(f"sox {current_audio} {output_stereo} channels 2 rate 48000 dither")
     
 
-async def speak_async(audio_path: Path):
+async def speak_async(audio_path: Path, audio_playing_event):
     """Reproduce el audio de forma asíncrona."""
     process = await asyncio.create_subprocess_exec(
         'aplay', '-D', 'hw:2,0', str(audio_path),
@@ -26,6 +26,8 @@ async def speak_async(audio_path: Path):
         stderr=asyncio.subprocess.PIPE
     )
     await process.communicate()
+    audio_playing_event.clear()
+    
 
 
 class AbstractServo(ABC):
@@ -41,11 +43,11 @@ class AbstractServo(ABC):
         # Configurar el rango de pulso
         self.kit.servo[self.servo_channel].set_pulse_width_range(self.pulse_min, self.pulse_max)
 
-    async def move_quickly(self):
+    async def move_quickly(self, audio_playing_event: asyncio.Event):
         """Mueve el servo rápidamente mientras el evento está activo (reproduciendo audio)."""
         #while audio_playing_event.is_set():  # Cambiamos la condición para que se mueva mientras el evento está activo
             # Mover rápidamente la boca simulando hablar
-        while True:
+        while audio_playing_event.is_set():
             await self.just_move(self.max_angle)
             await asyncio.sleep(0.2)
             await self.just_move(self.min_angle)        
@@ -77,11 +79,16 @@ class AbstractServo(ABC):
         #print(f"Servo {self.__class__.__name__} movido en pasos a {target_angle}° en {total_time:.2f} segundos")
         self.current_angle = target_angle
 
-    async def move_naturally(self, stop_flag = None):
+    async def move_naturally(self, stop_flag = None, audio_playing_event=None):
         while True:
             if stop_flag is not None and stop_flag.is_set():
                 await asyncio.sleep(0.1)
                 continue            
+
+            if audio_playing_event is not None and audio_playing_event.is_set():
+                await asyncio.sleep(0.1)
+                continue
+
             pattern_type = random.choice(["oscillation", "hold", "small_variation"])
 
             if pattern_type == "oscillation":
@@ -184,6 +191,7 @@ class ServoController:
         self.min_time_between_updates = 0.4  # Tiempo mínimo entre movimientos (200ms)
         self.last_centroid = None  # Último centroide procesado
         self.stop_natural_movement = asyncio.Event()
+        self.audio_playing_event = asyncio.Event()
         self.last_message_time = time.time()
         self.time_without_messages = 5 
         self.audio_queue = asyncio.Queue()
@@ -215,19 +223,29 @@ class ServoController:
 
                 # Agregar el nuevo audio a la cola
                 await self.audio_queue.put(audio_path)
-                self.last_audio_played = audio_path  # Actualiza el último audio reproducido
+                self.last_audio_played = audio_path
 
     async def audio_player(self):
-        """Reproduce audios de la cola de manera secuencial."""
+        """Reproduce audios de la cola de manera secuencial y mueve la boca rápidamente mientras se reproduce."""
         while True:
             try:
-                # Utiliza get() para esperar por el siguiente audio
                 audio_path = await self.audio_queue.get()
-                await speak_async(audio_path)
+
+                # Inicia el movimiento rápido al reproducir el audio
+                self.audio_playing_event.set()
+                
+                # Reproduce el audio mientras mueve la boca rápidamente
+                await asyncio.gather(
+                    speak_async(audio_path, self.audio_playing_event),
+                    self.mouth_servo.move_quickly(self.audio_playing_event)
+                )
+
+                # Al terminar, desactiva el evento para detener el movimiento rápido
+                self.audio_playing_event.clear()
+
                 self.audio_queue.task_done()
             except Exception as exc:
                 print(exc)
-
 
     async def default_position(self):
         """ Coloca todos los servos en su posición predeterminada usando `move_servo`. """
@@ -302,7 +320,7 @@ class ServoController:
         await asyncio.gather(
             self.process_mqtt_messages(),
             self.tail_servo.move_naturally(),      
-            self.mouth_servo.move_naturally(),     
+            self.mouth_servo.move_naturally(audio_playing_event=self.audio_playing_event),
             self.eye_brightness.move_naturally(),  
             self.left_right_servo.move_naturally(self.stop_natural_movement),
             self.audio_player()                 
