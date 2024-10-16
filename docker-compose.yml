@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  cat_control:
+    container_name: cat_control
+    image: cat_control
+    privileged: true
+    network_mode: host
+    environment:
+      - BLINKA_FORCEBOARD=JETSON_NANO
+      - PULSE_SERVER=unix:/run/user/1003/pulse/native
+    devices:
+      - /dev/i2c-1
+      - /dev/snd
+    volumes:
+      - /var/ghostlycat:/var/ghostlycat
+      - /run/user/1003/pulse:/run/user/1003/pulse
+      - /usr/share/sounds/alsa:/usr/share/sounds/alsa
+      - /etc/machine-id:/etc/machine-id
+
+  cat_video:
+    container_name: cat_video
+    image: cat_video
+    privileged: true
+    shm_size: '16gb'
+    runtime: nvidia
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    ipc: host
+    devices:
+      - /dev/video0
+    volumes:
+      - /tmp/argus_socket:/tmp/argus_socket
+      - /var/ghostlycat:/var/ghostlycat
