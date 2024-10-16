@@ -2,7 +2,9 @@ version: '3.8'
 services:
   cat_control:
     container_name: cat_control
-    image: cat_control
+    build:
+      context: . # Ruta donde está el Dockerfile
+      dockerfile: ./cat_control/Dockerfile # Nombre del Dockerfile (opcional, si se llama 'Dockerfile' no es necesario)
     privileged: true
     network_mode: host
     environment:
@@ -19,7 +21,9 @@ services:
 
   cat_video:
     container_name: cat_video
-    image: cat_video
+    build:
+      context: . # Ruta donde está el Dockerfile para cat_video
+      dockerfile: ./cat_video/Dockerfile # Nombre del Dockerfile (opcional)
     privileged: true
     shm_size: '16gb'
     runtime: nvidia
