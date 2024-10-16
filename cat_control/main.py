@@ -323,7 +323,7 @@ class ServoController:
             self.mouth_servo.move_naturally(audio_playing_event=self.audio_playing_event),
             self.eye_brightness.move_naturally(),  
             self.left_right_servo.move_naturally(self.stop_natural_movement),
-            self.audio_player()                 
+            #self.audio_player()                 
         )
 
     async def shutdown(self):
