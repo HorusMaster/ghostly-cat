@@ -18,6 +18,7 @@ services:
       - /run/user/1003/pulse:/run/user/1003/pulse
       - /usr/share/sounds/alsa:/usr/share/sounds/alsa
       - /etc/machine-id:/etc/machine-id
+    restart: always
 
   cat_video:
     container_name: cat_video
@@ -41,3 +42,4 @@ services:
     volumes:
       - /tmp/argus_socket:/tmp/argus_socket
       - /var/ghostlycat:/var/ghostlycat
+    restart: always

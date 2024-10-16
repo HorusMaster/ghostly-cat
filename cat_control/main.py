@@ -297,7 +297,7 @@ class ServoController:
                     self.last_message_time = time.time()
                 elif topic == MQTT_FACE_TOPIC:
                     face_detected = payload.decode("utf-8")
-                    print(face_detected)
+                    #print(face_detected)
                     #print(f"Rostro detectado: {face_detected}")
                     await self.play_face_audio(face_detected)
                 #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
