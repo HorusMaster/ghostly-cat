@@ -203,13 +203,13 @@ class ServoController:
         self.audio_queue = asyncio.Queue()
         self.last_audio_played = None  
 
-        self.audio_files = {
-            "yare": YARE_AUDIO,
-            "pepe": PEPE_AUDIO,
-            "tita": TITA_AUDIO,
-            "vale": VALE_AUDIO,
-            "hola": HOLA_AUDIO
-        }
+        # self.audio_files = {
+        #     "yare": YARE_AUDIO,
+        #     "pepe": PEPE_AUDIO,
+        #     "tita": TITA_AUDIO,
+        #     "vale": VALE_AUDIO,
+        #     "hola": HOLA_AUDIO
+        # }
  
 
     async def play_face_audio(self, face_detected):
@@ -305,7 +305,7 @@ class ServoController:
                     face_detected = payload.decode("utf-8")
                     #print(face_detected)
                     #print(f"Rostro detectado: {face_detected}")
-                    await self.play_face_audio(face_detected)
+                    #await self.play_face_audio(face_detected)
                 #print(f"Centroid recibido: X={centroid_x}, Y={centroid_y}")     
                 #if self.should_process_telemetry(telemetry):      
                
