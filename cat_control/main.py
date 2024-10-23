@@ -212,24 +212,24 @@ class ServoController:
         # }
  
 
-    async def play_face_audio(self, face_detected):
-        """Limpia la cola de audios anteriores y coloca el audio del último rostro detectado si no es el mismo."""
-        if face_detected in self.audio_files:
-            audio_path = self.audio_files[face_detected]
+    # async def play_face_audio(self, face_detected):
+    #     """Limpia la cola de audios anteriores y coloca el audio del último rostro detectado si no es el mismo."""
+    #     if face_detected in self.audio_files:
+    #         audio_path = self.audio_files[face_detected]
 
-            # Verifica si es el mismo audio que ya está en la cola
-            if audio_path != self.last_audio_played:
-                # Vacía la cola antes de agregar el nuevo audio
-                while not self.audio_queue.empty():
-                    try:
-                        self.audio_queue.get_nowait()
-                        self.audio_queue.task_done()
-                    except queue.Empty:
-                        break
+    #         # Verifica si es el mismo audio que ya está en la cola
+    #         if audio_path != self.last_audio_played:
+    #             # Vacía la cola antes de agregar el nuevo audio
+    #             while not self.audio_queue.empty():
+    #                 try:
+    #                     self.audio_queue.get_nowait()
+    #                     self.audio_queue.task_done()
+    #                 except queue.Empty:
+    #                     break
 
-                # Agregar el nuevo audio a la cola
-                await self.audio_queue.put(audio_path)
-                self.last_audio_played = audio_path
+    #             # Agregar el nuevo audio a la cola
+    #             await self.audio_queue.put(audio_path)
+    #             self.last_audio_played = audio_path
 
     async def audio_player(self):
         """Reproduce audios de la cola de manera secuencial y mueve la boca rápidamente mientras se reproduce."""
@@ -321,7 +321,7 @@ class ServoController:
 
     async def main(self):
         await self.default_position()
-        await self.play_face_audio("hola")
+        #await self.play_face_audio("hola")
         # Ejecutar los movimientos naturales de cada servo
         await asyncio.gather(
             self.process_mqtt_messages(),
