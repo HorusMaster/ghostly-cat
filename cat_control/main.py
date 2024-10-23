@@ -176,8 +176,14 @@ class EyeBrightnessControl(AbstractServo):
 
 class ServoController:
     def __init__(self):
-        self.kit = ServoKit(channels=16, address=0x40)
-        self.kit.frequency = 50
+        while True:
+            try:
+                self.kit = ServoKit(channels=16, address=0x40)
+                self.kit.frequency = 50
+                break
+            except Exception:
+                print("Failed to load PCA Servocontroller Trying in 10 seconds")
+            time.sleep(10)
 
         # Instanciar servos con sus valores constantes definidos en cada subclase
         self.tail_servo = TailServo(self.kit)
@@ -339,11 +345,11 @@ def shutdown_handler(loop, servo_controller):
     asyncio.create_task(servo_controller.shutdown())
 
 if __name__ == '__main__':
-    PEPE_AUDIO = Path("audios/pepe_stereo.wav")
-    YARE_AUDIO = Path("audios/yare_stereo.wav")
-    TITA_AUDIO = Path("audios/tita_stereo.wav")
-    VALE_AUDIO = Path("audios/vale_stereo.wav") 
-    HOLA_AUDIO = Path("audios/hola_stereo.wav")
+    # PEPE_AUDIO = Path("audios/pepe_stereo.wav")
+    # YARE_AUDIO = Path("audios/yare_stereo.wav")
+    # TITA_AUDIO = Path("audios/tita_stereo.wav")
+    # VALE_AUDIO = Path("audios/vale_stereo.wav") 
+    # HOLA_AUDIO = Path("audios/hola_stereo.wav")
     
     #AUDIOS = Path("/var/ghostlycat/audios")
     #convert_audio(AUDIOS, HOLA_AUDIO)

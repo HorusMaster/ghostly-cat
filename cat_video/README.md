@@ -10,18 +10,6 @@ docker build -f ./Dockerfile ../ -t cat_video
 
 To run the container
 ```
-docker run -it  --rm \
-                --privileged \
-                --shm-size 16gb \
-                --runtime nvidia \
-                --network host \
-                --gpus=all \
-                --ipc=host \
-                --device /dev/video0 \
-                --volume /tmp/argus_socket:/tmp/argus_socket \
-                --volume /var/ghostlycat:/var/ghostlycat \
-                cat_video
-
 docker run -it  \
                 --privileged \
                 --shm-size 16gb \
@@ -32,7 +20,7 @@ docker run -it  \
                 --device /dev/video0 \
                 --volume /tmp/argus_socket:/tmp/argus_socket \
                 --volume /var/ghostlycat:/var/ghostlycat \
-                cat_video
+                ghostly-cat_cat_video
 ```
 
 

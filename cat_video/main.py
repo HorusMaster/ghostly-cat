@@ -7,7 +7,7 @@ from modules.face_manager import FaceTrainer
 
 
 class CatFaceDetector:
-    def __init__(self, model_path: Path, prototxt_path:Path, mqtt_client: MQTTClient, face_trainer:FaceTrainer, video_output_path: Path=None, draw_boxes:bool=False, fps_limit:int=10):
+    def __init__(self, model_path: Path, prototxt_path:Path, mqtt_client: MQTTClient, face_trainer:FaceTrainer=None, video_output_path: Path=None, draw_boxes:bool=False, fps_limit:int=10):
         self.model_path = str(model_path)
         self.prototxt_path = str(prototxt_path)
         self.mqtt_client = mqtt_client
@@ -48,7 +48,7 @@ class CatFaceDetector:
         """Publicar el nombre de la persona reconocida"""       
         self.mqtt_client.publish(MQTT_FACE_TOPIC, name.encode())
 
-
+    
     def process_frame(self):
         ret, frame = self.cap.read()
 
@@ -86,12 +86,14 @@ class CatFaceDetector:
 
                 self.publish_centroid(CatTelemetry(centroid_x, centroid_y))
 
-                face_encoding = detections[0, 0, i, 3:7]
+              
 
-                # Comparar con encodings entrenados                
-                name = self.face_trainer.compare_encodings(face_encoding)                
-                # Publicar el nombre reconocido
-                self.publish_recognized_name(name)
+                # Comparar con encodings entrenados     
+                if self.face_trainer:
+                    face_encoding = detections[0, 0, i, 3:7]
+                    name = self.face_trainer.compare_encodings(face_encoding)                
+                    # Publicar el nombre reconocido
+                    self.publish_recognized_name(name)
 
         if self.out:
             self.out.write(frame)
@@ -105,6 +107,7 @@ class CatFaceDetector:
         cv2.destroyAllWindows()
 
     def run(self):
+        print("Starting Cat Video")
         while True:
             if not self.process_frame():
                 break
@@ -124,13 +127,12 @@ if __name__ == "__main__":
     mqtt_client = MQTTClient()
     mqtt_client.client_start()
 
-    face_trainer = FaceTrainer(ENCODINGS_PATH, PROTOTXT_PATH, MODEL_PATH)
+    #face_trainer = FaceTrainer(ENCODINGS_PATH, PROTOTXT_PATH, MODEL_PATH)
 
     detector = CatFaceDetector(
         model_path=MODEL_PATH,
         prototxt_path=PROTOTXT_PATH,
-        mqtt_client=mqtt_client,
-        face_trainer=face_trainer,
+        mqtt_client=mqtt_client,       
         fps_limit=10
        
     )

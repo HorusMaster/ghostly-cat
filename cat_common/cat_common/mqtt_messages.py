@@ -62,7 +62,7 @@ class MQTTClient:
             # En caso de error con la codificación ASCII, se reemplazan los caracteres especiales.
             print(message.encode('ascii', 'replace').decode('ascii'))
         client.subscribe(MQTT_TOPIC)
-        client.subscribe(MQTT_FACE_TOPIC)
+        #client.subscribe(MQTT_FACE_TOPIC)
 
     def disconnect(self):       
         self.client.loop_stop()  # Detiene el loop_start
